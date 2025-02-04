@@ -1,14 +1,16 @@
 import streamlit as st
 import plotly.graph_objects as go
 import math
+import pandas as pd
 from fpdf import FPDF
 import io
 import openai
+import os
 
 # Load the API key from Streamlit Cloud secrets.
 openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
-# (Optional) Debug: show first 4 characters of API key
+# (Optional) Debug: show only the first few characters of the API key.
 st.write(f"API Key loaded: {openai.api_key[:4]}...")
 
 # -------------------------------
@@ -245,29 +247,44 @@ brand_name = st.sidebar.text_input("Brand Name", "Enter the brand name here...")
 business_problem = st.sidebar.text_area("Business Problem", "Describe the business problem you are trying to solve...")
 additional_business_info = st.sidebar.text_area("Additional Business Info", "Enter any additional info about the brand or strategy here...")
 
+# New field for Investment Range (in dollars)
+investment_range = st.sidebar.slider("Investment Range ($)", 0, 1000000, 100000, step=10000)
+
+# New field for Client Vertical (10 options)
+vertical = st.sidebar.selectbox("Client Vertical", 
+    ["Other", "Travel", "CPG", "Finance", "Technology", "Retail", "Healthcare", "Education", "Hospitality", "Automotive"])
+
 # Existing fields
 top_priority = st.sidebar.selectbox("Top Priority Objective", list(objectives.keys()))
 brand_lifecycle = st.sidebar.selectbox("Brand Lifecycle Stage", ["New", "Growing", "Mature", "Declining"])
-vertical = st.sidebar.selectbox("Client Vertical", 
-    ["Other", "Travel", "CPG", "Finance", "Technology", "Retail", "Healthcare", "Education", "Hospitality", "Automotive"])
 marketing_priorities = st.sidebar.multiselect("Marketing Priorities", 
     ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"])
 creative_formats = st.sidebar.multiselect("Creative Formats Available", 
     ["OLV", "Static Images", "TV", "Interactive", "Audio"])
 
 # -------------------------------
+# ORIGINAL vs UPDATED ALLOCATION SLIDERS
+# -------------------------------
+st.sidebar.subheader("Channel Allocation Adjustments")
+original_allocation = vertical_channel_mix[vertical]
+updated_allocation = {}
+for channel, value in original_allocation.items():
+    updated_allocation[channel] = st.sidebar.slider(f"Allocation for {channel}", 0, 100, value, step=1)
+
+# -------------------------------
 # HEADER & INSTRUCTIONS
 # -------------------------------
 st.markdown('<h1 class="main-title">Cortex: Professional Paid Media Strategy Tool</h1>', unsafe_allow_html=True)
-st.write("Welcome! Use the sidebar to input your business criteria. Hover over the nodes for details, and use your mouse to zoom/pan the interactive map. Once satisfied, click **Download Report** for a detailed strategy summary.")
+st.write("Welcome! Use the sidebar to input your business criteria and adjust channel allocations. Hover over the nodes for details, and use your mouse to zoom/pan the interactive map. When ready, click **Update Final Plan** to generate a tailored strategy. Once satisfied, click **Download Report** for a detailed PDF.")
 
 st.subheader("Your Inputs")
 st.write(f"**Brand Name:** {brand_name}")
 st.write(f"**Business Problem:** {business_problem}")
 st.write(f"**Additional Business Info:** {additional_business_info}")
+st.write(f"**Investment Range:** ${investment_range:,}")
+st.write(f"**Client Vertical:** {vertical}")
 st.write(f"**Top Priority Objective:** {top_priority}")
 st.write(f"**Brand Lifecycle Stage:** {brand_lifecycle}")
-st.write(f"**Client Vertical:** {vertical}")
 st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketing_priorities else 'None'}")
 st.write(f"**Creative Formats Available:** {', '.join(creative_formats) if creative_formats else 'None'}")
 
@@ -276,14 +293,11 @@ st.write(f"**Creative Formats Available:** {', '.join(creative_formats) if creat
 # -------------------------------
 st.subheader("Interactive Paid Media Strategy Map")
 
-# Parameters for node positioning
-R_main = 3      # Radius for main nodes from center
-R_sub = 1       # Radius for sub-nodes (only for top priority)
-R_detail = 0.7  # Radius for detail nodes from sub-node
-
+R_main = 3      
+R_sub = 1       
+R_detail = 0.7  
 center_x, center_y = 0, 0
 
-# Fixed angles for main nodes (in degrees)
 angles = {
     "Awareness": 90,
     "Growth": 18,
@@ -292,7 +306,6 @@ angles = {
     "Household Penetration": -198
 }
 
-# Build node arrays for the mind map
 node_x = []
 node_y = []
 node_text = []
@@ -376,7 +389,6 @@ for sub in sub_nodes:
         node_color.append("purple")
         node_size.append(8)
 
-# Create the mind map figure
 fig = go.Figure()
 
 fig.add_trace(go.Scatter(
@@ -390,7 +402,6 @@ fig.add_trace(go.Scatter(
     hoverinfo="text"
 ))
 
-# Connect central node to main nodes
 for obj, pos in main_positions.items():
     fig.add_shape(
         type="line",
@@ -399,7 +410,6 @@ for obj, pos in main_positions.items():
         line=dict(color="lightgrey", width=2)
     )
 
-# Connect top priority main node to its sub-nodes
 if top_priority in main_positions:
     main_pos = main_positions[top_priority]
     for sub in sub_nodes:
@@ -411,7 +421,6 @@ if top_priority in main_positions:
             line=dict(color="lightgrey", width=1.5)
         )
 
-# Connect sub-nodes to detail nodes
 for sub in sub_nodes:
     sx, sy, sub_label, _, base_angle = sub
     detail_str = objectives[top_priority][sub_label]
@@ -433,10 +442,6 @@ for sub in sub_nodes:
             line=dict(color="lightgrey", width=1)
         )
 
-# (Optional) Highlight a suggested objective based on lifecycle if different from selected top priority
-# For simplicity, this part is omitted; you could add it if needed.
-
-# Set figure layout
 fig.update_layout(
     dragmode="pan",
     hovermode="closest",
@@ -450,56 +455,85 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # -------------------------------
-# RADAR CHART FOR VERTICAL CHANNEL MIX
+# RADAR CHART FOR VERTICAL CHANNEL MIX (Original vs. Updated)
 # -------------------------------
-st.subheader("Recommended Channel Mix")
-channels = list(vertical_channel_mix[vertical].keys())
-values = list(vertical_channel_mix[vertical].values())
+st.subheader("Channel Allocation Comparison")
+
+channels_list = list(vertical_channel_mix[vertical].keys())
+original_values = [vertical_channel_mix[vertical][ch] for ch in channels_list]
+updated_values = [updated_allocation[ch] for ch in channels_list]
 
 radar_fig = go.Figure()
 
 radar_fig.add_trace(go.Scatterpolar(
-    r=values,
-    theta=channels,
+    r=original_values,
+    theta=channels_list,
     fill='toself',
-    fillcolor="rgba(0,37,97,0.3)",  # #002561 at 30% opacity
+    fillcolor="rgba(0,37,97,0.3)",  # Secondary color at 30% opacity
+    line_color="#002561",
+    name='Original Allocation'
+))
+
+radar_fig.add_trace(go.Scatterpolar(
+    r=updated_values,
+    theta=channels_list,
+    fill='toself',
+    fillcolor="rgba(236,21,90,0.3)",  # Primary color at 30% opacity
     line_color="#EC155A",
-    name='Channel Mix'
+    name='Updated Allocation'
 ))
 
 radar_fig.update_layout(
     polar=dict(
         radialaxis=dict(
             visible=True,
-            range=[0, 40]
+            range=[0, 100]
         )
     ),
-    showlegend=False,
-    title=f"Channel Mix for {vertical} Brands ({brand_lifecycle} Stage)"
+    showlegend=True,
+    title=f"Channel Mix for {vertical} Brands (Based on Client Inputs)"
 )
 
 st.plotly_chart(radar_fig, use_container_width=True)
 
+st.subheader("Allocation Comparison")
+allocation_df = pd.DataFrame({
+    "Channel": channels_list,
+    "Original Allocation": original_values,
+    "Updated Allocation": updated_values
+})
+st.table(allocation_df)
+
 # -------------------------------
-# FINAL AI GENERATED PLAN SUMMARY
+# FINAL AI GENERATED PLAN SUMMARY (Unified)
 # -------------------------------
 st.subheader("Final Plan Summary")
 
-def generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats, base_summary):
+def generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats, investment_range, updated_allocations, base_summary):
+    # Optionally, read reference content from a file for extra context.
+    reference_content = ""
+    if os.path.exists("reference.txt"):
+        with open("reference.txt", "r", encoding="utf-8") as f:
+            reference_content = f.read()
+    
     full_context = (
+        f"You are a professional paid media and marketing consultant. Using Junction 37's expertise, generate a final plan summary with two parts. "
+        f"First, include a 'TLDR:' section that provides a one-sentence summary. Then, provide an expanded section (2-3 paragraphs) with actionable insights, "
+        f"relevant links to articles or resources, and creative recommendations tailored to the client's business problem, vertical, investment range, and available creative formats.\n\n"
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
         f"Additional Business Info: {additional_business_info}\n"
         f"Client Vertical: {vertical}\n"
-        f"Creative Formats Available: {', '.join(creative_formats) if creative_formats else 'None'}\n\n"
+        f"Investment Range: ${investment_range:,}\n"
+        f"Creative Formats Available: {', '.join(creative_formats) if creative_formats else 'None'}\n"
+        f"Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities else 'None'}\n"
+        f"Updated Channel Allocations: " + ", ".join([f"{ch}: {updated_allocations[ch]}" for ch in updated_allocations]) + "\n"
+        f"Reference Documents: {reference_content}\n\n"
         f"Other Client Inputs:\n"
         f"Top Priority Objective: {top_priority}\n"
-        f"Brand Lifecycle Stage: {brand_lifecycle}\n"
-        f"Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities else 'None'}\n\n"
+        f"Brand Lifecycle Stage: {brand_lifecycle}\n\n"
         f"Base strategy summary: {base_summary}\n\n"
-        f"Generate a final plan summary as a single, coherent paragraph. "
-        f"Include actionable insights, relevant links to articles or resources, and creative recommendations that are tailored "
-        f"to the client's business problem, vertical, and available creative formats."
+        f"Generate a final plan summary as specified."
     )
     try:
         response = openai.ChatCompletion.create(
@@ -508,7 +542,7 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
                 {"role": "system", "content": "You are a professional paid media and marketing consultant."},
                 {"role": "user", "content": full_context}
             ],
-            max_tokens=250,
+            max_tokens=300,
             temperature=0.7
         )
         generated_text = response.choices[0].message.content.strip()
@@ -516,19 +550,20 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
     except Exception as e:
         return "Error generating AI insight: " + str(e)
 
-# Prepare a base summary
 base_plan_summary = (
     f"Your top priority is {top_priority} for a brand in the {brand_lifecycle} stage operating in the {vertical} vertical. "
-    f"Recommended actions include: {objectives[top_priority]['Strategic Imperatives'].lower()} and leveraging a channel mix that "
-    f"focuses on key areas such as {', '.join(channels)}."
+    f"Recommended actions include {objectives[top_priority]['Strategic Imperatives'].lower()} and leveraging a channel mix that "
+    f"has been updated based on client inputs."
 )
 
-# Use a button to trigger AI generation (only when clicked)
 if "final_plan" not in st.session_state:
     st.session_state.final_plan = base_plan_summary
 
 if st.button("Update Final Plan"):
-    st.session_state.final_plan = generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats, base_plan_summary)
+    st.session_state.final_plan = generate_full_plan(
+        brand_name, business_problem, additional_business_info, vertical, creative_formats,
+        investment_range, updated_allocation, base_plan_summary
+    )
 
 st.markdown(st.session_state.final_plan)
 
@@ -552,6 +587,7 @@ Cortex Plan Report
 Brand Name: {brand_name}
 Business Problem: {business_problem}
 Additional Business Info: {additional_business_info}
+Investment Range: ${investment_range:,}
 
 Top Priority Objective: {top_priority}
 Brand Lifecycle Stage: {brand_lifecycle}
@@ -566,7 +602,10 @@ Strategic Details:
 - Messaging Approach: {objectives[top_priority]['Messaging Approach']}
 
 Recommended Channel Mix (for {vertical}):
-""" + "\n".join([f"- {channel}: {value}" for channel, value in vertical_channel_mix[vertical].items()]) + f"""
+""" + "\n".join([f"- {channel}: {vertical_channel_mix[vertical][channel]}" for channel in vertical_channel_mix[vertical].keys()]) + f"""
+
+Updated Channel Allocations:
+""" + "\n".join([f"- {channel}: {updated_allocation[channel]}" for channel in updated_allocation.keys()]) + f"""
 
 Final Plan Summary:
 {st.session_state.final_plan}
