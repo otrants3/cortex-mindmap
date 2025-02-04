@@ -1,6 +1,12 @@
 import streamlit as st
 import plotly.graph_objects as go
 import math
+from fpdf import FPDF
+import io
+import openai
+
+# Load the API key from Streamlit Cloud secrets.
+openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
 # -------------------------------
 # CUSTOM CSS FOR A POLISHED LOOK
@@ -71,12 +77,54 @@ objectives = {
 }
 
 # -------------------------------
-# CHANNEL MIX RECOMMENDATIONS (Radar Chart Data)
+# EXPANDED CHANNEL MIX RECOMMENDATIONS (Radar Chart Data)
 # -------------------------------
 channel_mix = {
-    "CPG": {"Digital": 30, "TV": 25, "OOH": 20, "Social": 15, "Search": 10},
-    "DTC": {"Digital": 40, "Social": 30, "Search": 20, "OOH": 5, "TV": 5},
-    "Hybrid": {"Digital": 35, "TV": 20, "OOH": 20, "Social": 15, "Search": 10},
+    "CPG": {
+        "Retail Media": 30,
+        "Paid Search": 15,
+        "Paid Social": 10,
+        "Linear TV": 35,
+        "Programmatic Display": 25,
+        "Connected TV": 20,
+        "Livewire Gaming": 5,
+        "Online Video": 15,
+        "Affiliate": 10,
+        "Influencer": 10,
+        "Email": 10,
+        "OOH/DOOH": 25,
+        "Audio": 10
+    },
+    "DTC": {
+        "Retail Media": 10,
+        "Paid Search": 30,
+        "Paid Social": 35,
+        "Linear TV": 5,
+        "Programmatic Display": 30,
+        "Connected TV": 10,
+        "Livewire Gaming": 10,
+        "Online Video": 25,
+        "Affiliate": 15,
+        "Influencer": 25,
+        "Email": 25,
+        "OOH/DOOH": 5,
+        "Audio": 10
+    },
+    "Hybrid": {
+        "Retail Media": 20,
+        "Paid Search": 25,
+        "Paid Social": 25,
+        "Linear TV": 15,
+        "Programmatic Display": 20,
+        "Connected TV": 15,
+        "Livewire Gaming": 10,
+        "Online Video": 20,
+        "Affiliate": 15,
+        "Influencer": 15,
+        "Email": 20,
+        "OOH/DOOH": 15,
+        "Audio": 10
+    }
 }
 
 # -------------------------------
@@ -129,6 +177,12 @@ marketing_priorities = st.sidebar.multiselect(
     ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"]
 )
 
+# NEW: Text box for additional client context verbiage
+additional_context = st.sidebar.text_area(
+    "Additional Client Context",
+    "Enter any extra context, goals, or thoughts here..."
+)
+
 # -------------------------------
 # HEADER & INSTRUCTIONS
 # -------------------------------
@@ -140,6 +194,7 @@ st.write(f"**Top Priority Objective:** {top_priority}")
 st.write(f"**Brand Lifecycle Stage:** {brand_lifecycle}")
 st.write(f"**Industry Type:** {industry_type}")
 st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketing_priorities else 'None'}")
+st.write(f"**Additional Context:** {additional_context}")
 
 # -------------------------------
 # INTERACTIVE MIND MAP SETUP
@@ -195,12 +250,12 @@ for obj, angle_deg in angles.items():
     node_text.append(obj)
     hover_info = f"{obj}: {objectives[obj]['Strategic Imperatives']}"
     node_hover.append(hover_info)
-    # Highlight the top priority node
+    # Use Junction 37 colors: top priority uses #EC155A, others use #002561
     if obj == top_priority:
-        node_color.append("red")
+        node_color.append("#EC155A")
         node_size.append(20)
     else:
-        node_color.append("blue")
+        node_color.append("#002561")
         node_size.append(15)
 
 # 3. Sub-Nodes for the top priority objective only
@@ -222,7 +277,7 @@ if top_priority in main_positions:
         node_y.append(sy)
         node_text.append(sub_label)
         node_hover.append(sub_hover)
-        node_color.append("orange")
+        node_color.append("#EC155A")
         node_size.append(12)
 
 # 4. Detail Nodes branching off each sub-node (only for top priority)
@@ -309,11 +364,10 @@ for sub in sub_nodes:
             line=dict(color="lightgrey", width=1)
         )
 
-# NEW: Highlight suggested objective based on brand lifecycle
+# NEW: Highlight suggested objective based on brand lifecycle (if different from selected top priority)
 suggested_obj = lifecycle_suggested.get(brand_lifecycle)
 if suggested_obj and suggested_obj in main_positions and suggested_obj != top_priority:
     pos = main_positions[suggested_obj]
-    # Add a dashed green circle around the suggested node
     fig.add_shape(
         type="circle",
         xref="x", yref="y",
@@ -348,6 +402,8 @@ radar_fig.add_trace(go.Scatterpolar(
     r=values,
     theta=channels,
     fill='toself',
+    fillcolor="rgba(0,37,97,0.3)",  # #002561 at 30% opacity
+    line_color="#EC155A",
     name='Channel Mix'
 ))
 
@@ -355,7 +411,7 @@ radar_fig.update_layout(
     polar=dict(
         radialaxis=dict(
             visible=True,
-            range=[0, 50]
+            range=[0, 40]
         )
     ),
     showlegend=False,
@@ -369,7 +425,6 @@ st.plotly_chart(radar_fig, use_container_width=True)
 # -------------------------------
 st.subheader("Additional Strategic Insights")
 
-# Lifecycle-based recommendation
 lifecycle_recs = {
     "New": "Being in the New stage, it's essential to focus on building brand awareness and testing your messaging across channels.",
     "Growing": "As a Growing brand, scaling your customer acquisition while optimizing retention becomes critical.",
@@ -378,7 +433,6 @@ lifecycle_recs = {
 }
 lifecycle_text = lifecycle_recs.get(brand_lifecycle, "")
 
-# Marketing priority recommendations (if any)
 priority_texts = []
 for priority in marketing_priorities:
     rec = marketing_priority_recs.get(priority, "")
@@ -393,16 +447,16 @@ else:
 st.markdown(f"**Lifecycle Insight:** {lifecycle_text}")
 st.markdown(f"**Marketing Priority Recommendations:**\n{marketing_text}")
 
-# Dynamic recommendation based on lifecycle and industry (from our mapping)
 rec_key = (brand_lifecycle, industry_type)
 dynamic_rec = recommendation_mapping.get(rec_key, "Tailor your approach based on industry trends and your brand's lifecycle.")
 st.markdown(f"**Overall Recommendation:** {dynamic_rec}")
 
 # -------------------------------
-# AUTOMATICALLY GENERATED PLAN SUMMARY
+# AUTOMATICALLY GENERATED PLAN SUMMARY (Including AI Insights)
 # -------------------------------
 st.subheader("Plan Summary")
-plan_summary = (
+
+base_plan_summary = (
     f"Based on your inputs, your top priority is **{top_priority}**, and your brand is currently in the **{brand_lifecycle}** stage "
     f"within the **{industry_type}** industry. With marketing priorities focused on {', '.join(marketing_priorities) if marketing_priorities else 'a balanced approach'}, "
     f"we recommend that you {objectives[top_priority]['Strategic Imperatives'].lower()}. "
@@ -413,44 +467,84 @@ plan_summary = (
     f"This comprehensive strategy aims to build awareness, boost conversions, and ensure sustainable growth."
 )
 
-st.markdown(plan_summary)
+def generate_ai_insight(context, base_summary):
+    prompt = (
+        f"Using Junction 37's media strategy expertise, the client's goals, and the following context:\n\n"
+        f"{context}\n\n"
+        f"Base strategy summary: {base_summary}\n\n"
+        f"Generate a concise, professional analysis of the recommended paid media plan."
+    )
+    try:
+        response = openai.Completion.create(
+            engine="gpt-4o min",  # or your preferred model
+            prompt=prompt,
+            max_tokens=150,
+            temperature=0.7,
+            n=1,
+            stop=None
+        )
+        generated_text = response.choices[0].text.strip()
+        return generated_text
+    except Exception as e:
+        return "Error generating AI insight: " + str(e)
+
+if additional_context.strip():
+    ai_insight = generate_ai_insight(additional_context, base_plan_summary)
+else:
+    ai_insight = base_plan_summary
+
+full_plan_summary = base_plan_summary + "\n\n**AI Analysis:** " + ai_insight
+
+st.markdown(full_plan_summary)
 
 # -------------------------------
-# PROFESSIONAL REPORTING: DOWNLOADABLE REPORT
+# GENERATE PDF REPORT USING FPDF
 # -------------------------------
-report = f"""
-# Cortex Plan Report
+def generate_pdf(report_text):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    for line in report_text.split('\n'):
+        pdf.multi_cell(0, 10, txt=line)
+    pdf_buffer = io.BytesIO()
+    pdf.output(pdf_buffer)
+    return pdf_buffer.getvalue()
 
-**Business Objective:** {top_priority}  
-**Brand Lifecycle Stage:** {brand_lifecycle}  
-**Industry Type:** {industry_type}  
-**Marketing Priorities:** {', '.join(marketing_priorities) if marketing_priorities else 'None'}  
+report_text = f"""
+Cortex Plan Report
 
-## Strategic Details
-- **Strategic Imperatives:** {objectives[top_priority]['Strategic Imperatives']}
-- **KPIs:** {objectives[top_priority]['KPIs']}
-- **Core Audiences:** {objectives[top_priority]['Core Audiences']}
-- **Messaging Approach:** {objectives[top_priority]['Messaging Approach']}
+Business Objective: {top_priority}
+Brand Lifecycle Stage: {brand_lifecycle}
+Industry Type: {industry_type}
+Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities else 'None'}
 
-## Recommended Channel Mix (for {industry_type})
-{chr(10).join([f"- {channel}: {value}" for channel, value in channel_mix[industry_type].items()])}
+Strategic Details:
+- Strategic Imperatives: {objectives[top_priority]['Strategic Imperatives']}
+- KPIs: {objectives[top_priority]['KPIs']}
+- Core Audiences: {objectives[top_priority]['Core Audiences']}
+- Messaging Approach: {objectives[top_priority]['Messaging Approach']}
 
-## Additional Insights
-- **Lifecycle Insight:** {lifecycle_text}
-- **Marketing Recommendations:**  
-{chr(10).join([f"  {txt}" for txt in priority_texts])}
-- **Overall Recommendation:** {dynamic_rec}
+Recommended Channel Mix (for {industry_type}):
+""" + "\n".join([f"- {channel}: {value}" for channel, value in channel_mix[industry_type].items()]) + f"""
 
-## Plan Summary
-{plan_summary}
+Additional Insights:
+- Lifecycle Insight: {lifecycle_text}
+- Marketing Recommendations:
+{chr(10).join(priority_texts) if priority_texts else 'None'}
+- Overall Recommendation: {dynamic_rec}
 
-## Case Study
-Our client [Placeholder] achieved remarkable results by aligning their paid media strategy with **{top_priority}**.
+Plan Summary:
+{full_plan_summary}
+
+Case Study:
+Our client [Placeholder] achieved remarkable results by aligning their paid media strategy with {top_priority}.
 """
 
+pdf_data = generate_pdf(report_text)
+
 st.download_button(
-    label="Download Report",
-    data=report,
-    file_name="cortex_plan_report.md",
-    mime="text/markdown"
+    label="Download PDF Report",
+    data=pdf_data,
+    file_name="cortex_plan_report.pdf",
+    mime="application/pdf"
 )
