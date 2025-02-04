@@ -108,6 +108,16 @@ marketing_priority_recs = {
 }
 
 # -------------------------------
+# NEW: SUGGESTED OBJECTIVE BASED ON BRAND LIFECYCLE
+# -------------------------------
+lifecycle_suggested = {
+    "New": "Awareness",
+    "Growing": "Growth",
+    "Mature": "Profitability",
+    "Declining": "Household Penetration"
+}
+
+# -------------------------------
 # SIDEBAR: CLIENT INPUTS
 # -------------------------------
 st.sidebar.header("Client Inputs")
@@ -299,6 +309,19 @@ for sub in sub_nodes:
             line=dict(color="lightgrey", width=1)
         )
 
+# NEW: Highlight suggested objective based on brand lifecycle
+suggested_obj = lifecycle_suggested.get(brand_lifecycle)
+if suggested_obj and suggested_obj in main_positions and suggested_obj != top_priority:
+    pos = main_positions[suggested_obj]
+    # Add a dashed green circle around the suggested node
+    fig.add_shape(
+        type="circle",
+        xref="x", yref="y",
+        x0=pos[0]-0.3, y0=pos[1]-0.3,
+        x1=pos[0]+0.3, y1=pos[1]+0.3,
+        line=dict(color="green", width=2, dash="dot")
+    )
+
 # Enhanced layout: enable panning/zoom and set a clean white background.
 fig.update_layout(
     dragmode="pan",
@@ -336,7 +359,7 @@ radar_fig.update_layout(
         )
     ),
     showlegend=False,
-    title=f"Channel Mix for {industry_type} Brands"
+    title=f"Channel Mix for {industry_type} Brands ({brand_lifecycle} Stage)"
 )
 
 st.plotly_chart(radar_fig, use_container_width=True)
