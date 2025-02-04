@@ -8,6 +8,9 @@ import openai
 # Load the API key from Streamlit Cloud secrets.
 openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
+# DEBUG: Optional (prints first few characters of the key)
+st.write(f"API Key loaded: {openai.api_key[:4]}...") 
+
 # -------------------------------
 # CUSTOM CSS FOR A POLISHED LOOK
 # -------------------------------
@@ -183,10 +186,6 @@ marketing_priorities = st.sidebar.multiselect(
     "Marketing Priorities", 
     ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"]
 )
-additional_context = st.sidebar.text_area(
-    "Additional Client Context",
-    "Enter any extra context, goals, or thoughts here..."
-)
 
 # -------------------------------
 # HEADER & INSTRUCTIONS
@@ -202,7 +201,6 @@ st.write(f"**Top Priority Objective:** {top_priority}")
 st.write(f"**Brand Lifecycle Stage:** {brand_lifecycle}")
 st.write(f"**Industry Type:** {industry_type}")
 st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketing_priorities else 'None'}")
-st.write(f"**Additional Context:** {additional_context}")
 
 # -------------------------------
 # INTERACTIVE MIND MAP SETUP
@@ -475,28 +473,27 @@ base_plan_summary = (
     f"This comprehensive strategy aims to build awareness, boost conversions, and ensure sustainable growth."
 )
 
-def generate_ai_insight(brand_name, business_problem, additional_business_info, additional_context, base_summary):
+def generate_ai_insight(brand_name, business_problem, additional_business_info, base_summary):
     full_context = (
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
-        f"Additional Business Info: {additional_business_info}\n"
-        f"Additional Context: {additional_context}\n\n"
+        f"Additional Business Info: {additional_business_info}\n\n"
         f"Other Client Inputs:\n"
         f"Top Priority Objective: {top_priority}\n"
         f"Brand Lifecycle Stage: {brand_lifecycle}\n"
         f"Industry Type: {industry_type}\n"
         f"Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities else 'None'}\n\n"
         f"Base strategy summary: {base_summary}\n\n"
-        f"Generate a concise, professional analysis and tailored plan for the client."
+        f"Generate a concise, professional analysis in a single paragraph."
     )
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # using a valid model ID
+            model="gpt-3.5-turbo",  # using a valid model
             messages=[
                 {"role": "system", "content": "You are a professional media strategy consultant."},
                 {"role": "user", "content": full_context}
             ],
-            max_tokens=150,
+            max_tokens=200,
             temperature=0.7
         )
         generated_text = response.choices[0].message.content.strip()
@@ -505,7 +502,7 @@ def generate_ai_insight(brand_name, business_problem, additional_business_info, 
         return "Error generating AI insight: " + str(e)
 
 if brand_name.strip() and business_problem.strip() and additional_business_info.strip():
-    ai_insight = generate_ai_insight(brand_name, business_problem, additional_business_info, additional_context, base_plan_summary)
+    ai_insight = generate_ai_insight(brand_name, business_problem, additional_business_info, base_plan_summary)
 else:
     ai_insight = base_plan_summary
 
