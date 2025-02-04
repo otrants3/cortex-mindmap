@@ -476,7 +476,7 @@ def generate_ai_insight(context, base_summary):
     )
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4o min",  # or your preferred model
+            model="gpt-3.5-turbo",  # Using a valid model ID
             messages=[
                 {"role": "system", "content": "You are a professional media strategy consultant."},
                 {"role": "user", "content": prompt}
@@ -509,7 +509,7 @@ def generate_pdf(report_text):
     for line in report_text.split('\n'):
         safe_line = line.encode("latin1", "replace").decode("latin1")
         pdf.multi_cell(0, 10, txt=safe_line)
-    # Instead of writing directly to a buffer, output as string and then encode.
+    # Output as string and then encode to bytes.
     pdf_output_str = pdf.output(dest="S")
     pdf_bytes = pdf_output_str.encode("latin1", "replace")
     return pdf_bytes
