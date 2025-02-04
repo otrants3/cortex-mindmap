@@ -1,39 +1,44 @@
 import streamlit as st
 import plotly.graph_objects as go
+import math
 
-# Sample data structure for business objectives
-data = {
+# Data structure for objectives and their details
+objectives = {
     "Awareness": {
         "Strategic Imperatives": "Prioritize reach and frequency",
-        "KPIs": ["Brand Lift", "% Reach", "Frequency"],
-        "Core Audiences": ["Influencers and early adopters", "Interest-based prospecting"],
+        "KPIs": "Brand Lift, % Reach, Frequency",
+        "Core Audiences": "Influencers and early adopters, Interest-based prospecting",
         "Messaging Approach": "Emotional storytelling"
     },
     "Growth": {
         "Strategic Imperatives": "Maximize purchase volume",
-        "KPIs": ["Customer acquisition costs (CAC)", "Sales volume"],
-        "Core Audiences": ["Category buyers", "Lookalikes"],
+        "KPIs": "Customer acquisition costs (CAC), Sales volume",
+        "Core Audiences": "Category buyers, Lookalikes",
         "Messaging Approach": "Highlight key value propositions"
+    },
+    "Profitability": {
+        "Strategic Imperatives": "Optimize for high margin products and high LTV consumers",
+        "KPIs": "LTV/CAC ratio, Incremental sales lift, Marginal ROI",
+        "Core Audiences": "Cart abandoners, 1P CRM segments",
+        "Messaging Approach": "Upselling and cross-selling"
+    },
+    "Buy Rate": {
+        "Strategic Imperatives": "Increase purchase frequency",
+        "KPIs": "Repeat purchase rate, Customer retention",
+        "Core Audiences": "Existing brand buyers, Lapsed brand buyers",
+        "Messaging Approach": "Personalized recommendations and loyalty incentives"
+    },
+    "Household Penetration": {
+        "Strategic Imperatives": "Grow the customer base",
+        "KPIs": "Household penetration %, New to brand sales",
+        "Core Audiences": "Competitor buyers, New life stage consumers",
+        "Messaging Approach": "Problem-solution framing to appeal to new users"
     }
 }
 
-# Sample case studies mapping (objective, industry) to case study text
-case_studies = {
-    ("Awareness", "CPG"): "Example: Company A increased brand lift by 20% with targeted influencer marketing.",
-    ("Growth", "Tech"): "Example: Company B achieved a 15% sales increase with performance marketing.",
-    ("Awareness", "Tech"): "Example: Company C boosted online engagement by 25% via digital campaigns.",
-    ("Growth", "CPG"): "Example: Company D reduced CAC by 10% through optimized ad spend."
-}
-
-# Color mapping for business objectives
-color_map = {
-    "Awareness": "blue",
-    "Growth": "green"
-}
-
-# Sidebar: Custom Client Inputs
+# Sidebar: Client Inputs
 st.sidebar.header("Client Inputs")
-business_objective = st.sidebar.selectbox("Business Objective", list(data.keys()))
+top_priority = st.sidebar.selectbox("Top Priority Objective", list(objectives.keys()))
 brand_lifecycle = st.sidebar.selectbox("Brand Lifecycle Stage", ["New", "Growing", "Mature", "Declining"])
 industry_type = st.sidebar.selectbox("Industry Type", ["CPG", "Tech", "Finance", "Retail"])
 marketing_priorities = st.sidebar.multiselect(
@@ -41,124 +46,144 @@ marketing_priorities = st.sidebar.multiselect(
     ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"]
 )
 
-# Main Title & Intro
-st.title("Cortex: Interactive Business Planning")
-st.write("Explore tailored strategies and insights based on your business inputs.")
-
 # Display Client Selections
-st.subheader("Your Selections")
-st.write(f"**Business Objective:** {business_objective}")
+st.subheader("Your Inputs")
+st.write(f"**Top Priority Objective:** {top_priority}")
 st.write(f"**Brand Lifecycle Stage:** {brand_lifecycle}")
 st.write(f"**Industry Type:** {industry_type}")
-st.write("**Marketing Priorities:**", ", ".join(marketing_priorities) if marketing_priorities else "None selected")
+st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketing_priorities else 'None'}")
 
-# Expanders for Strategy Details
-st.subheader(f"Strategic Approach for {business_objective}")
-with st.expander("Strategic Imperatives"):
-    st.write(data[business_objective]["Strategic Imperatives"])
-with st.expander("KPIs"):
-    st.write(", ".join(data[business_objective]["KPIs"]))
-with st.expander("Core Audiences"):
-    st.write(", ".join(data[business_objective]["Core Audiences"]))
-with st.expander("Messaging Approach"):
-    st.write(data[business_objective]["Messaging Approach"])
+# Create the Interactive Mind Map Visualization
+st.subheader("Interactive Paid Media Strategy Map")
 
-# Interactive Mind Map Visualization
-st.subheader("Interactive Mind Map")
-fig = go.Figure()
+# Parameters for node positioning
+R_main = 3      # Radius for main nodes from center
+R_sub = 1       # Radius for sub-nodes from their main node
+center_x, center_y = 0, 0
 
-# Define coordinates for each node (central node and four branches)
-nodes = {
-    business_objective: (0, 0),
-    "Strategic Imperatives": (-1, 1),
-    "KPIs": (1, 1),
-    "Core Audiences": (-1, -1),
-    "Messaging Approach": (1, -1)
+# Define fixed angles (in degrees) for the main nodes so that Awareness is at the top
+angles = {
+    "Awareness": 90,
+    "Growth": 18,
+    "Profitability": -54,
+    "Buy Rate": -126,
+    "Household Penetration": -198  # This is equivalent to 162°
 }
 
-# Create lists for coordinates, text, and colors
-node_x = [coord[0] for coord in nodes.values()]
-node_y = [coord[1] for coord in nodes.values()]
-node_text = list(nodes.keys())
-node_colors = []
-for text in node_text:
-    if text == business_objective:
-        node_colors.append(color_map.get(business_objective, "black"))
-    else:
-        node_colors.append("grey")
+# Lists to store node data for plotting
+node_x = []
+node_y = []
+node_text = []
+node_hover = []
+node_color = []
+node_size = []
 
-# Plot the nodes
+# Add the central node
+node_x.append(center_x)
+node_y.append(center_y)
+node_text.append("Paid Media Strategy")
+node_hover.append("Central Strategy Node")
+node_color.append("black")
+node_size.append(25)
+
+# Dictionary to store positions of main nodes (to later attach sub-nodes)
+main_positions = {}
+
+# Add main objective nodes
+for obj, angle_deg in angles.items():
+    angle_rad = math.radians(angle_deg)
+    x = center_x + R_main * math.cos(angle_rad)
+    y = center_y + R_main * math.sin(angle_rad)
+    main_positions[obj] = (x, y)
+    node_x.append(x)
+    node_y.append(y)
+    node_text.append(obj)
+    # Show a brief detail on hover
+    hover_info = f"{obj}: {objectives[obj]['Strategic Imperatives']}"
+    node_hover.append(hover_info)
+    # Highlight if it’s the top priority
+    if obj == top_priority:
+        node_color.append("red")
+        node_size.append(20)
+    else:
+        node_color.append("blue")
+        node_size.append(15)
+
+# Define sub-node types and offsets (in degrees relative to the main node’s angle)
+sub_node_labels = ["Strategic Imperatives", "KPIs", "Core Audiences", "Messaging Approach"]
+sub_offsets = [45, -45, 135, -135]
+
+# Add sub-nodes for each main node
+for obj, (mx, my) in main_positions.items():
+    for i, sub_label in enumerate(sub_node_labels):
+        # Offset the sub-node position relative to the main node's angle
+        offset_angle_deg = angles[obj] + sub_offsets[i]
+        offset_angle_rad = math.radians(offset_angle_deg)
+        sx = mx + R_sub * math.cos(offset_angle_rad)
+        sy = my + R_sub * math.sin(offset_angle_rad)
+        node_x.append(sx)
+        node_y.append(sy)
+        node_text.append(sub_label)
+        detail = objectives[obj][sub_label]
+        node_hover.append(f"{sub_label} for {obj}: {detail}")
+        # Highlight sub-nodes if the parent is the top priority
+        if obj == top_priority:
+            node_color.append("orange")
+            node_size.append(12)
+        else:
+            node_color.append("grey")
+            node_size.append(10)
+
+# Create the Plotly figure
+fig = go.Figure()
+
 fig.add_trace(go.Scatter(
     x=node_x,
     y=node_y,
     mode='markers+text',
-    marker=dict(size=20, color=node_colors),
     text=node_text,
-    textposition="bottom center"
+    textposition="top center",
+    marker=dict(color=node_color, size=node_size),
+    hovertext=node_hover,
+    hoverinfo="text"
 ))
 
-# Draw lines connecting the central objective to the other nodes
-center = nodes[business_objective]
-for node, coord in nodes.items():
-    if node != business_objective:
-        fig.add_shape(type="line",
-                      x0=center[0], y0=center[1],
-                      x1=coord[0], y1=coord[1],
-                      line=dict(color="lightgrey", width=2))
+# Add lines from the central node to each main node
+for obj, pos in main_positions.items():
+    fig.add_shape(
+        type="line",
+        x0=center_x, y0=center_y,
+        x1=pos[0], y1=pos[1],
+        line=dict(color="lightgrey", width=2)
+    )
 
-# Hide axes and set layout margins
+# Add lines from each main node to its sub-nodes
+# The central node is at index 0, main nodes are next, followed by sub-nodes.
+start_index_for_sub = 1 + len(main_positions)
+index = start_index_for_sub
+for obj, (mx, my) in main_positions.items():
+    for i in range(4):
+        sx = node_x[index]
+        sy = node_y[index]
+        fig.add_shape(
+            type="line",
+            x0=mx, y0=my,
+            x1=sx, y1=sy,
+            line=dict(color="lightgrey", width=1)
+        )
+        index += 1
+
+# Hide axis details and set margins
 fig.update_layout(
     xaxis=dict(visible=False),
     yaxis=dict(visible=False),
-    margin=dict(l=20, r=20, t=20, b=20)
+    margin=dict(l=20, r=20, t=20, b=20),
+    height=600
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
-# Display Case Study based on objective and industry
+# Placeholder Case Study & Benchmarking Section
 st.subheader("Case Study & Benchmarking")
-case_key = (business_objective, industry_type)
-case_text = case_studies.get(case_key, "No specific case study available for these selections. Explore our other campaigns for similar insights.")
-st.write(case_text)
-
-# Backend Recommendations based on Marketing Priorities
-st.subheader("Recommendations")
-recommendations = []
-if "Increase conversions" in marketing_priorities:
-    recommendations.append("Optimize your website and landing pages to drive conversions.")
-if "Boost retention" in marketing_priorities:
-    recommendations.append("Invest in customer loyalty programs and retention strategies.")
-if "Improve brand awareness" in marketing_priorities:
-    recommendations.append("Focus on broad-reaching campaigns and influencer collaborations.")
-if "Increase sales volume" in marketing_priorities:
-    recommendations.append("Leverage performance marketing and targeted promotions.")
-
-if recommendations:
-    for rec in recommendations:
-        st.write(f"- {rec}")
-else:
-    st.write("No specific recommendations. Consider exploring our full range of strategies.")
-
-# Generate a Report Summary for Download
-st.subheader("Export Your Cortex Plan")
-report = f"""
-Cortex Plan Report
-
-Business Objective: {business_objective}
-Brand Lifecycle Stage: {brand_lifecycle}
-Industry Type: {industry_type}
-Marketing Priorities: {", ".join(marketing_priorities) if marketing_priorities else "None"}
-
-Strategic Imperatives: {data[business_objective]['Strategic Imperatives']}
-KPIs: {", ".join(data[business_objective]['KPIs'])}
-Core Audiences: {", ".join(data[business_objective]['Core Audiences'])}
-Messaging Approach: {data[business_objective]['Messaging Approach']}
-
-Case Study: {case_text}
-
-Recommendations:
-"""
-for rec in recommendations:
-    report += f"- {rec}\n"
-
-st.download_button(label="Download Report", data=report, file_name="cortex_plan_report.txt", mime="text/plain")
+st.write(f"Based on your top priority of **{top_priority}**, here's a placeholder case study:")
+st.write("**Case Study:** Our client [Placeholder] achieved remarkable results by aligning their paid media strategy with this objective. Detailed insights and outcomes will be shared soon.")
