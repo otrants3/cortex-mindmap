@@ -169,6 +169,13 @@ lifecycle_suggested = {
 # SIDEBAR: CLIENT INPUTS
 # -------------------------------
 st.sidebar.header("Client Inputs")
+
+# New fields for business info
+brand_name = st.sidebar.text_input("Brand Name", "Enter the brand name here...")
+business_problem = st.sidebar.text_area("Business Problem", "Describe the business problem you are trying to solve...")
+additional_business_info = st.sidebar.text_area("Additional Business Info", "Enter any additional info about the brand or strategy here...")
+
+# Existing fields
 top_priority = st.sidebar.selectbox("Top Priority Objective", list(objectives.keys()))
 brand_lifecycle = st.sidebar.selectbox("Brand Lifecycle Stage", ["New", "Growing", "Mature", "Declining"])
 industry_type = st.sidebar.selectbox("Industry Type", ["CPG", "DTC", "Hybrid"])
@@ -176,8 +183,6 @@ marketing_priorities = st.sidebar.multiselect(
     "Marketing Priorities", 
     ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"]
 )
-
-# NEW: Text box for additional client context verbiage
 additional_context = st.sidebar.text_area(
     "Additional Client Context",
     "Enter any extra context, goals, or thoughts here..."
@@ -190,6 +195,9 @@ st.markdown('<h1 class="main-title">Cortex: Professional Paid Media Strategy Too
 st.write("Welcome! Use the sidebar to input your business criteria. Hover over the nodes for details, and use your mouse to zoom/pan the interactive map. Once satisfied, click **Download Report** for a detailed strategy summary.")
 
 st.subheader("Your Inputs")
+st.write(f"**Brand Name:** {brand_name}")
+st.write(f"**Business Problem:** {business_problem}")
+st.write(f"**Additional Business Info:** {additional_business_info}")
 st.write(f"**Top Priority Objective:** {top_priority}")
 st.write(f"**Brand Lifecycle Stage:** {brand_lifecycle}")
 st.write(f"**Industry Type:** {industry_type}")
@@ -364,7 +372,7 @@ for sub in sub_nodes:
             line=dict(color="lightgrey", width=1)
         )
 
-# NEW: Highlight suggested objective based on brand lifecycle (if different from selected top priority)
+# Highlight suggested objective based on brand lifecycle (if different from selected top priority)
 suggested_obj = lifecycle_suggested.get(brand_lifecycle)
 if suggested_obj and suggested_obj in main_positions and suggested_obj != top_priority:
     pos = main_positions[suggested_obj]
@@ -467,19 +475,26 @@ base_plan_summary = (
     f"This comprehensive strategy aims to build awareness, boost conversions, and ensure sustainable growth."
 )
 
-def generate_ai_insight(context, base_summary):
-    prompt = (
-        f"Using Junction 37's media strategy expertise, the client's goals, and the following context:\n\n"
-        f"{context}\n\n"
+def generate_ai_insight(brand_name, business_problem, additional_business_info, additional_context, base_summary):
+    full_context = (
+        f"Brand Name: {brand_name}\n"
+        f"Business Problem: {business_problem}\n"
+        f"Additional Business Info: {additional_business_info}\n"
+        f"Additional Context: {additional_context}\n\n"
+        f"Other Client Inputs:\n"
+        f"Top Priority Objective: {top_priority}\n"
+        f"Brand Lifecycle Stage: {brand_lifecycle}\n"
+        f"Industry Type: {industry_type}\n"
+        f"Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities else 'None'}\n\n"
         f"Base strategy summary: {base_summary}\n\n"
-        f"Generate a concise, professional analysis of the recommended paid media plan."
+        f"Generate a concise, professional analysis and tailored plan for the client."
     )
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # Using a valid model ID
+            model="gpt-3.5-turbo",  # using a valid model ID
             messages=[
                 {"role": "system", "content": "You are a professional media strategy consultant."},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": full_context}
             ],
             max_tokens=150,
             temperature=0.7
@@ -489,8 +504,8 @@ def generate_ai_insight(context, base_summary):
     except Exception as e:
         return "Error generating AI insight: " + str(e)
 
-if additional_context.strip():
-    ai_insight = generate_ai_insight(additional_context, base_plan_summary)
+if brand_name.strip() and business_problem.strip() and additional_business_info.strip():
+    ai_insight = generate_ai_insight(brand_name, business_problem, additional_business_info, additional_context, base_plan_summary)
 else:
     ai_insight = base_plan_summary
 
@@ -509,7 +524,7 @@ def generate_pdf(report_text):
     for line in report_text.split('\n'):
         safe_line = line.encode("latin1", "replace").decode("latin1")
         pdf.multi_cell(0, 10, txt=safe_line)
-    # Output as string and then encode to bytes.
+    # Output as a string and then encode to bytes.
     pdf_output_str = pdf.output(dest="S")
     pdf_bytes = pdf_output_str.encode("latin1", "replace")
     return pdf_bytes
