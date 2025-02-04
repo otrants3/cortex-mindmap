@@ -8,8 +8,8 @@ import openai
 # Load the API key from Streamlit Cloud secrets.
 openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
-# DEBUG: Optional (prints first few characters of the key)
-st.write(f"API Key loaded: {openai.api_key[:4]}...") 
+# Optional: DEBUG message (shows first 4 characters only)
+st.write(f"API Key loaded: {openai.api_key[:4]}...")
 
 # -------------------------------
 # CUSTOM CSS FOR A POLISHED LOOK
@@ -427,73 +427,34 @@ radar_fig.update_layout(
 st.plotly_chart(radar_fig, use_container_width=True)
 
 # -------------------------------
-# DYNAMIC INSIGHTS BASED ON LIFECYCLE & MARKETING PRIORITIES
+# FINAL AI GENERATED PLAN SUMMARY
 # -------------------------------
-st.subheader("Additional Strategic Insights")
+st.subheader("Final Plan Summary")
 
-lifecycle_recs = {
-    "New": "Being in the New stage, it's essential to focus on building brand awareness and testing your messaging across channels.",
-    "Growing": "As a Growing brand, scaling your customer acquisition while optimizing retention becomes critical.",
-    "Mature": "Mature brands should fine-tune their spend efficiency and deepen customer relationships to sustain profitability.",
-    "Declining": "For a Declining brand, consider a strategic overhaul—revitalize your campaigns and re-engage your audience."
-}
-lifecycle_text = lifecycle_recs.get(brand_lifecycle, "")
-
-priority_texts = []
-for priority in marketing_priorities:
-    rec = marketing_priority_recs.get(priority, "")
-    if rec:
-        priority_texts.append(f"- **{priority}**: {rec}")
-
-if priority_texts:
-    marketing_text = "\n".join(priority_texts)
-else:
-    marketing_text = "No specific marketing priority recommendations selected."
-
-st.markdown(f"**Lifecycle Insight:** {lifecycle_text}")
-st.markdown(f"**Marketing Priority Recommendations:**\n{marketing_text}")
-
-rec_key = (brand_lifecycle, industry_type)
-dynamic_rec = recommendation_mapping.get(rec_key, "Tailor your approach based on industry trends and your brand's lifecycle.")
-st.markdown(f"**Overall Recommendation:** {dynamic_rec}")
-
-# -------------------------------
-# AUTOMATICALLY GENERATED PLAN SUMMARY (Including AI Insights)
-# -------------------------------
-st.subheader("Plan Summary")
-
-base_plan_summary = (
-    f"Based on your inputs, your top priority is **{top_priority}**, and your brand is currently in the **{brand_lifecycle}** stage "
-    f"within the **{industry_type}** industry. With marketing priorities focused on {', '.join(marketing_priorities) if marketing_priorities else 'a balanced approach'}, "
-    f"we recommend that you {objectives[top_priority]['Strategic Imperatives'].lower()}. "
-    f"Our analysis suggests leveraging a channel mix that emphasizes key areas such as "
-    f"{', '.join(channels)}—as shown in the radar chart. "
-    f"Additionally, by focusing on the recommendations for both your lifecycle stage and the selected marketing priorities, "
-    f"you can optimize your media spend and drive better customer engagement. "
-    f"This comprehensive strategy aims to build awareness, boost conversions, and ensure sustainable growth."
-)
-
-def generate_ai_insight(brand_name, business_problem, additional_business_info, base_summary):
-    full_context = (
+# Create a function to generate the final plan summary using the new inputs.
+def generate_full_plan(brand_name, business_problem, additional_business_info, base_summary):
+    prompt = (
+        f"You are a professional paid media and marketing consultant. Using Junction 37's expertise, "
+        f"generate a concise, professional final plan summary in a single paragraph. Include actionable insights and "
+        f"relevant links to articles or resources that address the client's needs. Use the following client inputs:\n\n"
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
-        f"Additional Business Info: {additional_business_info}\n\n"
-        f"Other Client Inputs:\n"
+        f"Additional Business Info: {additional_business_info}\n"
         f"Top Priority Objective: {top_priority}\n"
         f"Brand Lifecycle Stage: {brand_lifecycle}\n"
         f"Industry Type: {industry_type}\n"
         f"Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities else 'None'}\n\n"
         f"Base strategy summary: {base_summary}\n\n"
-        f"Generate a concise, professional analysis in a single paragraph."
+        f"Generate a final plan summary as a single, coherent paragraph."
     )
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # using a valid model
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a professional media strategy consultant."},
-                {"role": "user", "content": full_context}
+                {"role": "user", "content": prompt}
             ],
-            max_tokens=200,
+            max_tokens=250,
             temperature=0.7
         )
         generated_text = response.choices[0].message.content.strip()
@@ -501,14 +462,21 @@ def generate_ai_insight(brand_name, business_problem, additional_business_info, 
     except Exception as e:
         return "Error generating AI insight: " + str(e)
 
-if brand_name.strip() and business_problem.strip() and additional_business_info.strip():
-    ai_insight = generate_ai_insight(brand_name, business_problem, additional_business_info, base_plan_summary)
-else:
-    ai_insight = base_plan_summary
+# Prepare a base summary (this can be a simple concatenation of the key inputs)
+base_plan_summary = (
+    f"Your top priority is {top_priority} for a brand in the {brand_lifecycle} stage operating in the {industry_type} sector. "
+    f"Recommended actions include: {objectives[top_priority]['Strategic Imperatives'].lower()} and leveraging a channel mix that "
+    f"focuses on key areas such as {', '.join(channels)}."
+)
 
-full_plan_summary = base_plan_summary + "\n\n**AI Analysis:** " + ai_insight
+# Use a button to trigger AI generation (and update session state accordingly)
+if "final_plan" not in st.session_state:
+    st.session_state.final_plan = base_plan_summary  # default summary
 
-st.markdown(full_plan_summary)
+if st.button("Update Final Plan"):
+    st.session_state.final_plan = generate_full_plan(brand_name, business_problem, additional_business_info, base_plan_summary)
+
+st.markdown(st.session_state.final_plan)
 
 # -------------------------------
 # GENERATE PDF REPORT USING FPDF
@@ -521,7 +489,6 @@ def generate_pdf(report_text):
     for line in report_text.split('\n'):
         safe_line = line.encode("latin1", "replace").decode("latin1")
         pdf.multi_cell(0, 10, txt=safe_line)
-    # Output as a string and then encode to bytes.
     pdf_output_str = pdf.output(dest="S")
     pdf_bytes = pdf_output_str.encode("latin1", "replace")
     return pdf_bytes
@@ -529,7 +496,11 @@ def generate_pdf(report_text):
 report_text = f"""
 Cortex Plan Report
 
-Business Objective: {top_priority}
+Brand Name: {brand_name}
+Business Problem: {business_problem}
+Additional Business Info: {additional_business_info}
+
+Top Priority Objective: {top_priority}
 Brand Lifecycle Stage: {brand_lifecycle}
 Industry Type: {industry_type}
 Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities else 'None'}
@@ -543,14 +514,8 @@ Strategic Details:
 Recommended Channel Mix (for {industry_type}):
 """ + "\n".join([f"- {channel}: {value}" for channel, value in channel_mix[industry_type].items()]) + f"""
 
-Additional Insights:
-- Lifecycle Insight: {lifecycle_text}
-- Marketing Recommendations:
-{chr(10).join(priority_texts) if priority_texts else 'None'}
-- Overall Recommendation: {dynamic_rec}
-
-Plan Summary:
-{full_plan_summary}
+Final Plan Summary:
+{st.session_state.final_plan}
 
 Case Study:
 Our client [Placeholder] achieved remarkable results by aligning their paid media strategy with {top_priority}.
