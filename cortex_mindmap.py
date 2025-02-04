@@ -476,12 +476,11 @@ def generate_ai_insight(context, base_summary):
     )
     try:
         response = openai.Completion.create(
-            engine="gpt-4o min",  # or your preferred model
+            model="gpt-4o min",  # use your preferred model here
             prompt=prompt,
             max_tokens=150,
             temperature=0.7,
-            n=1,
-            stop=None
+            n=1
         )
         generated_text = response.choices[0].text.strip()
         return generated_text
@@ -504,8 +503,10 @@ def generate_pdf(report_text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
+    # To handle any non-latin1 characters, encode with replacement.
     for line in report_text.split('\n'):
-        pdf.multi_cell(0, 10, txt=line)
+        safe_line = line.encode("latin1", "replace").decode("latin1")
+        pdf.multi_cell(0, 10, txt=safe_line)
     pdf_buffer = io.BytesIO()
     pdf.output(pdf_buffer)
     return pdf_buffer.getvalue()
