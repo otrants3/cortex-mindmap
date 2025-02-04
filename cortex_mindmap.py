@@ -35,7 +35,7 @@ st.markdown(
 )
 
 # -------------------------------
-# DATA STRUCTURES
+# DATA STRUCTURES FOR OBJECTIVES
 # -------------------------------
 objectives = {
     "Awareness": {
@@ -71,12 +71,39 @@ objectives = {
 }
 
 # -------------------------------
+# CHANNEL MIX RECOMMENDATIONS (Radar Chart Data)
+# -------------------------------
+channel_mix = {
+    "CPG": {"Digital": 30, "TV": 25, "OOH": 20, "Social": 15, "Search": 10},
+    "DTC": {"Digital": 40, "Social": 30, "Search": 20, "OOH": 5, "TV": 5},
+    "Hybrid": {"Digital": 35, "TV": 20, "OOH": 20, "Social": 15, "Search": 10},
+}
+
+# -------------------------------
+# RECOMMENDATION MAPPING BASED ON LIFECYCLE & INDUSTRY
+# -------------------------------
+recommendation_mapping = {
+    ("New", "CPG"): "For a new CPG brand, building awareness via digital and social channels is critical.",
+    ("New", "DTC"): "For a new DTC brand, focus on rapid awareness and testing direct response channels.",
+    ("New", "Hybrid"): "For a new Hybrid brand, a balanced approach to both awareness and conversion is key.",
+    ("Growing", "CPG"): "For a growing CPG brand, scaling with a mix of digital and traditional media can drive results.",
+    ("Growing", "DTC"): "For a growing DTC brand, customer acquisition and retention should be prioritized.",
+    ("Growing", "Hybrid"): "For a growing Hybrid brand, investing in both brand and performance strategies is recommended.",
+    ("Mature", "CPG"): "For a mature CPG brand, profitability and efficiency in media spend become essential.",
+    ("Mature", "DTC"): "For a mature DTC brand, optimizing targeting and leveraging data insights is crucial.",
+    ("Mature", "Hybrid"): "For a mature Hybrid brand, a refined mix of retention and performance marketing is advisable.",
+    ("Declining", "CPG"): "For a declining CPG brand, revitalizing the brand with innovative campaigns is key.",
+    ("Declining", "DTC"): "For a declining DTC brand, re-engaging customers and creative re-positioning are critical.",
+    ("Declining", "Hybrid"): "For a declining Hybrid brand, a strategic overhaul combining both brand and performance efforts is recommended."
+}
+
+# -------------------------------
 # SIDEBAR: CLIENT INPUTS
 # -------------------------------
 st.sidebar.header("Client Inputs")
 top_priority = st.sidebar.selectbox("Top Priority Objective", list(objectives.keys()))
 brand_lifecycle = st.sidebar.selectbox("Brand Lifecycle Stage", ["New", "Growing", "Mature", "Declining"])
-industry_type = st.sidebar.selectbox("Industry Type", ["CPG", "Tech", "Finance", "Retail"])
+industry_type = st.sidebar.selectbox("Industry Type", ["CPG", "DTC", "Hybrid"])
 marketing_priorities = st.sidebar.multiselect(
     "Marketing Priorities", 
     ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"]
@@ -86,7 +113,7 @@ marketing_priorities = st.sidebar.multiselect(
 # HEADER & INSTRUCTIONS
 # -------------------------------
 st.markdown('<h1 class="main-title">Cortex: Professional Paid Media Strategy Tool</h1>', unsafe_allow_html=True)
-st.write("Welcome! Use the sidebar to input your business criteria. Hover over the nodes for details, and use your mouse (or trackpad) to zoom and pan the interactive map. Once satisfied, click on **Download Report** for a detailed strategy summary.")
+st.write("Welcome! Use the sidebar to input your business criteria. Hover over the nodes for details, and use your mouse to zoom/pan the interactive map. Once satisfied, click **Download Report** for a detailed strategy summary.")
 
 st.subheader("Your Inputs")
 st.write(f"**Top Priority Objective:** {top_priority}")
@@ -100,9 +127,9 @@ st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketi
 st.subheader("Interactive Paid Media Strategy Map")
 
 # Parameters for node positioning
-R_main = 3      # radius for main nodes from center
-R_sub = 1       # radius for sub-nodes (only for top priority)
-R_detail = 0.7  # radius for detail nodes from sub-node
+R_main = 3      # Radius for main nodes from center
+R_sub = 1       # Radius for sub-nodes (only for top priority)
+R_detail = 0.7  # Radius for detail nodes from sub-node
 
 center_x, center_y = 0, 0
 
@@ -137,7 +164,6 @@ node_size.append(25)
 main_positions = {}   # store (x, y) for each main node
 main_angles = {}      # store the assigned angle for each main node
 
-i = 1  # index counter for main nodes
 for obj, angle_deg in angles.items():
     angle_rad = math.radians(angle_deg)
     x = center_x + R_main * math.cos(angle_rad)
@@ -149,20 +175,19 @@ for obj, angle_deg in angles.items():
     node_text.append(obj)
     hover_info = f"{obj}: {objectives[obj]['Strategic Imperatives']}"
     node_hover.append(hover_info)
-    # Highlight the top priority node
+    # Highlight the top priority node from the selectbox
     if obj == top_priority:
         node_color.append("red")
         node_size.append(20)
     else:
         node_color.append("blue")
         node_size.append(15)
-    i += 1
 
 # 3. Sub-Nodes for the top priority objective only
-sub_nodes = []  # Will store tuples: (x, y, label, hover_text, base_angle)
+sub_nodes = []  # tuples: (x, y, label, hover_text, base_angle)
 if top_priority in main_positions:
     sub_node_labels = ["Strategic Imperatives", "KPIs", "Core Audiences", "Messaging Approach"]
-    sub_offsets = [45, -45, 135, -135]  # relative offsets from the main node angle
+    sub_offsets = [45, -45, 135, -135]  # offsets relative to the main node's angle
     main_angle = main_angles[top_priority]
     main_x, main_y = main_positions[top_priority]
     for j, sub_label in enumerate(sub_node_labels):
@@ -181,11 +206,9 @@ if top_priority in main_positions:
         node_size.append(12)
 
 # 4. Detail Nodes branching off each sub-node (only for top priority)
-detail_nodes = []
 for sub in sub_nodes:
     sx, sy, sub_label, sub_hover, base_angle = sub
     detail_str = objectives[top_priority][sub_label]
-    # For KPIs and Core Audiences, split details by comma; else, use the full text.
     if sub_label in ["KPIs", "Core Audiences"]:
         details = [d.strip() for d in detail_str.split(",")]
     else:
@@ -200,7 +223,6 @@ for sub in sub_nodes:
         dy = sy + R_detail * math.sin(detail_angle_rad)
         detail_label = detail
         detail_hover = f"{sub_label} Detail: {detail}"
-        detail_nodes.append((dx, dy, detail_label, detail_hover))
         node_x.append(dx)
         node_y.append(dy)
         node_text.append(detail_label)
@@ -209,7 +231,7 @@ for sub in sub_nodes:
         node_size.append(8)
 
 # -------------------------------
-# BUILD THE PLOTLY FIGURE
+# BUILD THE PLOTLY FIGURE (MIND MAP)
 # -------------------------------
 fig = go.Figure()
 
@@ -281,13 +303,49 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # -------------------------------
-# CASE STUDY & PROFESSIONAL REPORTING
+# SUPPLEMENTARY VISUALIZATION: RADAR CHART FOR CHANNEL MIX
+# -------------------------------
+st.subheader("Recommended Channel Mix")
+channels = list(channel_mix[industry_type].keys())
+values = list(channel_mix[industry_type].values())
+
+radar_fig = go.Figure()
+
+radar_fig.add_trace(go.Scatterpolar(
+    r=values,
+    theta=channels,
+    fill='toself',
+    name='Channel Mix'
+))
+
+radar_fig.update_layout(
+    polar=dict(
+        radialaxis=dict(
+            visible=True,
+            range=[0, 50]
+        )
+    ),
+    showlegend=False,
+    title=f"Channel Mix for {industry_type} Brands"
+)
+
+st.plotly_chart(radar_fig, use_container_width=True)
+
+# -------------------------------
+# CASE STUDY & RECOMMENDATIONS
 # -------------------------------
 st.subheader("Case Study & Benchmarking")
-st.write(f"Based on your top priority of **{top_priority}**, here's a placeholder case study:")
-st.write("**Case Study:** Our client [Placeholder] achieved remarkable results by aligning their paid media strategy with this objective. Detailed insights and outcomes will be shared soon.")
+case_study_text = f"Based on your top priority of **{top_priority}**, our client [Placeholder] achieved remarkable results by aligning their strategy accordingly."
+st.write(f"**Case Study:** {case_study_text}")
 
-# Generate a professionally formatted report (Markdown format)
+# Dynamic recommendation text based on lifecycle and industry
+rec_key = (brand_lifecycle, industry_type)
+rec_message = recommendation_mapping.get(rec_key, "Tailor your approach based on industry trends and your brand's lifecycle.")
+st.markdown(f"**Recommendation:** {rec_message}")
+
+# -------------------------------
+# PROFESSIONAL REPORTING: DOWNLOADABLE REPORT
+# -------------------------------
 report = f"""
 # Cortex Plan Report
 
@@ -302,13 +360,14 @@ report = f"""
 - **Core Audiences:** {objectives[top_priority]['Core Audiences']}
 - **Messaging Approach:** {objectives[top_priority]['Messaging Approach']}
 
+## Recommended Channel Mix (for {industry_type})
+{chr(10).join([f"- {channel}: {value}" for channel, value in channel_mix[industry_type].items()])}
+
 ## Case Study
-Our client [Placeholder] achieved remarkable results by aligning their paid media strategy with **{top_priority}**. Detailed insights and outcomes will be shared soon.
+Our client [Placeholder] achieved remarkable results by aligning their paid media strategy with **{top_priority}**.
 
 ## Recommendations
-- Tailor your messaging to resonate with your key audience segments.
-- Optimize channel mix based on performance data.
-- Leverage data insights to refine your targeting and creative strategy.
+{rec_message}
 """
 
 st.download_button(
