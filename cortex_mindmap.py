@@ -8,7 +8,7 @@ import openai
 # Load the API key from Streamlit Cloud secrets.
 openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
-# Optional: DEBUG message (shows first 4 characters only)
+# (Optional) Debug: show first 4 characters of API key
 st.write(f"API Key loaded: {openai.api_key[:4]}...")
 
 # -------------------------------
@@ -80,9 +80,39 @@ objectives = {
 }
 
 # -------------------------------
-# EXPANDED CHANNEL MIX RECOMMENDATIONS (Radar Chart Data)
+# VERTICAL CHANNEL MIX RECOMMENDATIONS (Radar Chart Data)
 # -------------------------------
-channel_mix = {
+vertical_channel_mix = {
+    "Other": {
+        "Retail Media": 20,
+        "Paid Search": 20,
+        "Paid Social": 20,
+        "Linear TV": 20,
+        "Programmatic Display": 20,
+        "Connected TV": 15,
+        "Livewire Gaming": 5,
+        "Online Video": 20,
+        "Affiliate": 10,
+        "Influencer": 10,
+        "Email": 15,
+        "OOH/DOOH": 15,
+        "Audio": 10
+    },
+    "Travel": {
+        "Retail Media": 15,
+        "Paid Search": 25,
+        "Paid Social": 25,
+        "Linear TV": 10,
+        "Programmatic Display": 20,
+        "Connected TV": 15,
+        "Livewire Gaming": 5,
+        "Online Video": 30,
+        "Affiliate": 15,
+        "Influencer": 20,
+        "Email": 15,
+        "OOH/DOOH": 10,
+        "Audio": 10
+    },
     "CPG": {
         "Retail Media": 30,
         "Paid Search": 15,
@@ -98,74 +128,111 @@ channel_mix = {
         "OOH/DOOH": 25,
         "Audio": 10
     },
-    "DTC": {
+    "Finance": {
         "Retail Media": 10,
-        "Paid Search": 30,
-        "Paid Social": 35,
-        "Linear TV": 5,
-        "Programmatic Display": 30,
+        "Paid Search": 35,
+        "Paid Social": 20,
+        "Linear TV": 10,
+        "Programmatic Display": 20,
         "Connected TV": 10,
-        "Livewire Gaming": 10,
+        "Livewire Gaming": 0,
+        "Online Video": 20,
+        "Affiliate": 10,
+        "Influencer": 15,
+        "Email": 20,
+        "OOH/DOOH": 5,
+        "Audio": 15
+    },
+    "Technology": {
+        "Retail Media": 15,
+        "Paid Search": 25,
+        "Paid Social": 30,
+        "Linear TV": 5,
+        "Programmatic Display": 25,
+        "Connected TV": 15,
+        "Livewire Gaming": 5,
         "Online Video": 25,
         "Affiliate": 15,
-        "Influencer": 25,
-        "Email": 25,
+        "Influencer": 20,
+        "Email": 15,
         "OOH/DOOH": 5,
         "Audio": 10
     },
-    "Hybrid": {
-        "Retail Media": 20,
-        "Paid Search": 25,
-        "Paid Social": 25,
-        "Linear TV": 15,
-        "Programmatic Display": 20,
-        "Connected TV": 15,
-        "Livewire Gaming": 10,
+    "Retail": {
+        "Retail Media": 35,
+        "Paid Search": 20,
+        "Paid Social": 15,
+        "Linear TV": 30,
+        "Programmatic Display": 25,
+        "Connected TV": 20,
+        "Livewire Gaming": 5,
         "Online Video": 20,
         "Affiliate": 15,
         "Influencer": 15,
+        "Email": 10,
+        "OOH/DOOH": 30,
+        "Audio": 10
+    },
+    "Healthcare": {
+        "Retail Media": 10,
+        "Paid Search": 20,
+        "Paid Social": 20,
+        "Linear TV": 10,
+        "Programmatic Display": 20,
+        "Connected TV": 15,
+        "Livewire Gaming": 0,
+        "Online Video": 20,
+        "Affiliate": 10,
+        "Influencer": 10,
         "Email": 20,
-        "OOH/DOOH": 15,
+        "OOH/DOOH": 10,
+        "Audio": 10
+    },
+    "Education": {
+        "Retail Media": 10,
+        "Paid Search": 15,
+        "Paid Social": 15,
+        "Linear TV": 5,
+        "Programmatic Display": 15,
+        "Connected TV": 10,
+        "Livewire Gaming": 0,
+        "Online Video": 20,
+        "Affiliate": 10,
+        "Influencer": 5,
+        "Email": 15,
+        "OOH/DOOH": 5,
+        "Audio": 5
+    },
+    "Hospitality": {
+        "Retail Media": 20,
+        "Paid Search": 15,
+        "Paid Social": 20,
+        "Linear TV": 15,
+        "Programmatic Display": 20,
+        "Connected TV": 20,
+        "Livewire Gaming": 5,
+        "Online Video": 25,
+        "Affiliate": 15,
+        "Influencer": 20,
+        "Email": 15,
+        "OOH/DOOH": 20,
+        "Audio": 10
+    },
+    "Automotive": {
+        "Retail Media": 25,
+        "Paid Search": 20,
+        "Paid Social": 15,
+        "Linear TV": 25,
+        "Programmatic Display": 20,
+        "Connected TV": 20,
+        "Livewire Gaming": 5,
+        "Online Video": 20,
+        "Affiliate": 15,
+        "Influencer": 10,
+        "Email": 10,
+        "OOH/DOOH": 25,
         "Audio": 10
     }
-}
-
-# -------------------------------
-# RECOMMENDATION MAPPING BASED ON LIFECYCLE & INDUSTRY
-# -------------------------------
-recommendation_mapping = {
-    ("New", "CPG"): "For a new CPG brand, building awareness via digital and social channels is critical.",
-    ("New", "DTC"): "For a new DTC brand, focus on rapid awareness and testing direct response channels.",
-    ("New", "Hybrid"): "For a new Hybrid brand, a balanced approach to both awareness and conversion is key.",
-    ("Growing", "CPG"): "For a growing CPG brand, scaling with a mix of digital and traditional media can drive results.",
-    ("Growing", "DTC"): "For a growing DTC brand, customer acquisition and retention should be prioritized.",
-    ("Growing", "Hybrid"): "For a growing Hybrid brand, investing in both brand and performance strategies is recommended.",
-    ("Mature", "CPG"): "For a mature CPG brand, profitability and efficiency in media spend become essential.",
-    ("Mature", "DTC"): "For a mature DTC brand, optimizing targeting and leveraging data insights is crucial.",
-    ("Mature", "Hybrid"): "For a mature Hybrid brand, a refined mix of retention and performance marketing is advisable.",
-    ("Declining", "CPG"): "For a declining CPG brand, revitalizing the brand with innovative campaigns is key.",
-    ("Declining", "DTC"): "For a declining DTC brand, re-engaging customers and creative re-positioning are critical.",
-    ("Declining", "Hybrid"): "For a declining Hybrid brand, a strategic overhaul combining both brand and performance efforts is recommended."
-}
-
-# -------------------------------
-# ADDITIONAL RECOMMENDATIONS BASED ON MARKETING PRIORITIES
-# -------------------------------
-marketing_priority_recs = {
-    "Increase conversions": "Optimize landing pages and retargeting campaigns to boost conversion rates.",
-    "Boost retention": "Invest in loyalty programs, personalized email campaigns, and re-engagement strategies.",
-    "Improve brand awareness": "Leverage influencer partnerships, social media, and display advertising to raise visibility.",
-    "Increase sales volume": "Utilize targeted promotions, upselling, and cross-selling tactics to drive sales."
-}
-
-# -------------------------------
-# NEW: SUGGESTED OBJECTIVE BASED ON BRAND LIFECYCLE
-# -------------------------------
-lifecycle_suggested = {
-    "New": "Awareness",
-    "Growing": "Growth",
-    "Mature": "Profitability",
-    "Declining": "Household Penetration"
 }
 
 # -------------------------------
@@ -181,11 +248,12 @@ additional_business_info = st.sidebar.text_area("Additional Business Info", "Ent
 # Existing fields
 top_priority = st.sidebar.selectbox("Top Priority Objective", list(objectives.keys()))
 brand_lifecycle = st.sidebar.selectbox("Brand Lifecycle Stage", ["New", "Growing", "Mature", "Declining"])
-industry_type = st.sidebar.selectbox("Industry Type", ["CPG", "DTC", "Hybrid"])
-marketing_priorities = st.sidebar.multiselect(
-    "Marketing Priorities", 
-    ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"]
-)
+vertical = st.sidebar.selectbox("Client Vertical", 
+    ["Other", "Travel", "CPG", "Finance", "Technology", "Retail", "Healthcare", "Education", "Hospitality", "Automotive"])
+marketing_priorities = st.sidebar.multiselect("Marketing Priorities", 
+    ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"])
+creative_formats = st.sidebar.multiselect("Creative Formats Available", 
+    ["OLV", "Static Images", "TV", "Interactive", "Audio"])
 
 # -------------------------------
 # HEADER & INSTRUCTIONS
@@ -199,8 +267,9 @@ st.write(f"**Business Problem:** {business_problem}")
 st.write(f"**Additional Business Info:** {additional_business_info}")
 st.write(f"**Top Priority Objective:** {top_priority}")
 st.write(f"**Brand Lifecycle Stage:** {brand_lifecycle}")
-st.write(f"**Industry Type:** {industry_type}")
+st.write(f"**Client Vertical:** {vertical}")
 st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketing_priorities else 'None'}")
+st.write(f"**Creative Formats Available:** {', '.join(creative_formats) if creative_formats else 'None'}")
 
 # -------------------------------
 # INTERACTIVE MIND MAP SETUP
@@ -214,18 +283,16 @@ R_detail = 0.7  # Radius for detail nodes from sub-node
 
 center_x, center_y = 0, 0
 
-# Fixed angles (in degrees) for main nodes arranged radially
+# Fixed angles for main nodes (in degrees)
 angles = {
     "Awareness": 90,
     "Growth": 18,
     "Profitability": -54,
     "Buy Rate": -126,
-    "Household Penetration": -198  # Equivalent to 162°
+    "Household Penetration": -198
 }
 
-# -------------------------------
-# BUILD THE NODE ARRAYS
-# -------------------------------
+# Build node arrays for the mind map
 node_x = []
 node_y = []
 node_text = []
@@ -242,8 +309,8 @@ node_color.append("black")
 node_size.append(25)
 
 # 2. Main Nodes for each objective
-main_positions = {}   # store (x, y) for each main node
-main_angles = {}      # store the assigned angle for each main node
+main_positions = {}
+main_angles = {}
 
 for obj, angle_deg in angles.items():
     angle_rad = math.radians(angle_deg)
@@ -256,19 +323,18 @@ for obj, angle_deg in angles.items():
     node_text.append(obj)
     hover_info = f"{obj}: {objectives[obj]['Strategic Imperatives']}"
     node_hover.append(hover_info)
-    # Use Junction 37 colors: top priority uses #EC155A, others use #002561
     if obj == top_priority:
-        node_color.append("#EC155A")
+        node_color.append("#EC155A")  # J37 primary color
         node_size.append(20)
     else:
-        node_color.append("#002561")
+        node_color.append("#002561")  # J37 secondary color
         node_size.append(15)
 
-# 3. Sub-Nodes for the top priority objective only
-sub_nodes = []  # tuples: (x, y, label, hover_text, base_angle)
+# 3. Sub-Nodes for the top priority objective
+sub_nodes = []
 if top_priority in main_positions:
     sub_node_labels = ["Strategic Imperatives", "KPIs", "Core Audiences", "Messaging Approach"]
-    sub_offsets = [45, -45, 135, -135]  # offsets relative to the main node's angle
+    sub_offsets = [45, -45, 135, -135]
     main_angle = main_angles[top_priority]
     main_x, main_y = main_positions[top_priority]
     for j, sub_label in enumerate(sub_node_labels):
@@ -286,7 +352,7 @@ if top_priority in main_positions:
         node_color.append("#EC155A")
         node_size.append(12)
 
-# 4. Detail Nodes branching off each sub-node (only for top priority)
+# 4. Detail Nodes branching off each sub-node
 for sub in sub_nodes:
     sx, sy, sub_label, sub_hover, base_angle = sub
     detail_str = objectives[top_priority][sub_label]
@@ -294,7 +360,6 @@ for sub in sub_nodes:
         details = [d.strip() for d in detail_str.split(",")]
     else:
         details = [detail_str]
-    
     n_details = len(details)
     for idx, detail in enumerate(details):
         delta = (idx - (n_details - 1) / 2) * 15 if n_details > 1 else 0
@@ -311,9 +376,7 @@ for sub in sub_nodes:
         node_color.append("purple")
         node_size.append(8)
 
-# -------------------------------
-# BUILD THE PLOTLY FIGURE (MIND MAP)
-# -------------------------------
+# Create the mind map figure
 fig = go.Figure()
 
 fig.add_trace(go.Scatter(
@@ -327,7 +390,7 @@ fig.add_trace(go.Scatter(
     hoverinfo="text"
 ))
 
-# Draw lines from the central node to each main node
+# Connect central node to main nodes
 for obj, pos in main_positions.items():
     fig.add_shape(
         type="line",
@@ -336,7 +399,7 @@ for obj, pos in main_positions.items():
         line=dict(color="lightgrey", width=2)
     )
 
-# Draw lines from the top priority main node to its sub-nodes
+# Connect top priority main node to its sub-nodes
 if top_priority in main_positions:
     main_pos = main_positions[top_priority]
     for sub in sub_nodes:
@@ -348,7 +411,7 @@ if top_priority in main_positions:
             line=dict(color="lightgrey", width=1.5)
         )
 
-# Draw lines from each sub-node to its detail nodes
+# Connect sub-nodes to detail nodes
 for sub in sub_nodes:
     sx, sy, sub_label, _, base_angle = sub
     detail_str = objectives[top_priority][sub_label]
@@ -370,19 +433,10 @@ for sub in sub_nodes:
             line=dict(color="lightgrey", width=1)
         )
 
-# Highlight suggested objective based on brand lifecycle (if different from selected top priority)
-suggested_obj = lifecycle_suggested.get(brand_lifecycle)
-if suggested_obj and suggested_obj in main_positions and suggested_obj != top_priority:
-    pos = main_positions[suggested_obj]
-    fig.add_shape(
-        type="circle",
-        xref="x", yref="y",
-        x0=pos[0]-0.3, y0=pos[1]-0.3,
-        x1=pos[0]+0.3, y1=pos[1]+0.3,
-        line=dict(color="green", width=2, dash="dot")
-    )
+# (Optional) Highlight a suggested objective based on lifecycle if different from selected top priority
+# For simplicity, this part is omitted; you could add it if needed.
 
-# Enhanced layout: enable panning/zoom and set a clean white background.
+# Set figure layout
 fig.update_layout(
     dragmode="pan",
     hovermode="closest",
@@ -396,11 +450,11 @@ fig.update_layout(
 st.plotly_chart(fig, use_container_width=True)
 
 # -------------------------------
-# SUPPLEMENTARY VISUALIZATION: RADAR CHART FOR CHANNEL MIX
+# RADAR CHART FOR VERTICAL CHANNEL MIX
 # -------------------------------
 st.subheader("Recommended Channel Mix")
-channels = list(channel_mix[industry_type].keys())
-values = list(channel_mix[industry_type].values())
+channels = list(vertical_channel_mix[vertical].keys())
+values = list(vertical_channel_mix[vertical].values())
 
 radar_fig = go.Figure()
 
@@ -421,7 +475,7 @@ radar_fig.update_layout(
         )
     ),
     showlegend=False,
-    title=f"Channel Mix for {industry_type} Brands ({brand_lifecycle} Stage)"
+    title=f"Channel Mix for {vertical} Brands ({brand_lifecycle} Stage)"
 )
 
 st.plotly_chart(radar_fig, use_container_width=True)
@@ -431,28 +485,28 @@ st.plotly_chart(radar_fig, use_container_width=True)
 # -------------------------------
 st.subheader("Final Plan Summary")
 
-# Create a function to generate the final plan summary using the new inputs.
-def generate_full_plan(brand_name, business_problem, additional_business_info, base_summary):
-    prompt = (
-        f"You are a professional paid media and marketing consultant. Using Junction 37's expertise, "
-        f"generate a concise, professional final plan summary in a single paragraph. Include actionable insights and "
-        f"relevant links to articles or resources that address the client's needs. Use the following client inputs:\n\n"
+def generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats, base_summary):
+    full_context = (
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
         f"Additional Business Info: {additional_business_info}\n"
+        f"Client Vertical: {vertical}\n"
+        f"Creative Formats Available: {', '.join(creative_formats) if creative_formats else 'None'}\n\n"
+        f"Other Client Inputs:\n"
         f"Top Priority Objective: {top_priority}\n"
         f"Brand Lifecycle Stage: {brand_lifecycle}\n"
-        f"Industry Type: {industry_type}\n"
         f"Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities else 'None'}\n\n"
         f"Base strategy summary: {base_summary}\n\n"
-        f"Generate a final plan summary as a single, coherent paragraph."
+        f"Generate a final plan summary as a single, coherent paragraph. "
+        f"Include actionable insights, relevant links to articles or resources, and creative recommendations that are tailored "
+        f"to the client's business problem, vertical, and available creative formats."
     )
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a professional media strategy consultant."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "You are a professional paid media and marketing consultant."},
+                {"role": "user", "content": full_context}
             ],
             max_tokens=250,
             temperature=0.7
@@ -462,19 +516,19 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, b
     except Exception as e:
         return "Error generating AI insight: " + str(e)
 
-# Prepare a base summary (this can be a simple concatenation of the key inputs)
+# Prepare a base summary
 base_plan_summary = (
-    f"Your top priority is {top_priority} for a brand in the {brand_lifecycle} stage operating in the {industry_type} sector. "
+    f"Your top priority is {top_priority} for a brand in the {brand_lifecycle} stage operating in the {vertical} vertical. "
     f"Recommended actions include: {objectives[top_priority]['Strategic Imperatives'].lower()} and leveraging a channel mix that "
     f"focuses on key areas such as {', '.join(channels)}."
 )
 
-# Use a button to trigger AI generation (and update session state accordingly)
+# Use a button to trigger AI generation (only when clicked)
 if "final_plan" not in st.session_state:
-    st.session_state.final_plan = base_plan_summary  # default summary
+    st.session_state.final_plan = base_plan_summary
 
 if st.button("Update Final Plan"):
-    st.session_state.final_plan = generate_full_plan(brand_name, business_problem, additional_business_info, base_plan_summary)
+    st.session_state.final_plan = generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats, base_plan_summary)
 
 st.markdown(st.session_state.final_plan)
 
@@ -485,7 +539,6 @@ def generate_pdf(report_text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    # Process each line, encoding with replacement for unsupported characters.
     for line in report_text.split('\n'):
         safe_line = line.encode("latin1", "replace").decode("latin1")
         pdf.multi_cell(0, 10, txt=safe_line)
@@ -502,8 +555,9 @@ Additional Business Info: {additional_business_info}
 
 Top Priority Objective: {top_priority}
 Brand Lifecycle Stage: {brand_lifecycle}
-Industry Type: {industry_type}
+Client Vertical: {vertical}
 Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities else 'None'}
+Creative Formats Available: {', '.join(creative_formats) if creative_formats else 'None'}
 
 Strategic Details:
 - Strategic Imperatives: {objectives[top_priority]['Strategic Imperatives']}
@@ -511,8 +565,8 @@ Strategic Details:
 - Core Audiences: {objectives[top_priority]['Core Audiences']}
 - Messaging Approach: {objectives[top_priority]['Messaging Approach']}
 
-Recommended Channel Mix (for {industry_type}):
-""" + "\n".join([f"- {channel}: {value}" for channel, value in channel_mix[industry_type].items()]) + f"""
+Recommended Channel Mix (for {vertical}):
+""" + "\n".join([f"- {channel}: {value}" for channel, value in vertical_channel_mix[vertical].items()]) + f"""
 
 Final Plan Summary:
 {st.session_state.final_plan}
