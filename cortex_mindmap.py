@@ -98,6 +98,16 @@ recommendation_mapping = {
 }
 
 # -------------------------------
+# ADDITIONAL RECOMMENDATIONS BASED ON MARKETING PRIORITIES
+# -------------------------------
+marketing_priority_recs = {
+    "Increase conversions": "Optimize landing pages and retargeting campaigns to boost conversion rates.",
+    "Boost retention": "Invest in loyalty programs, personalized email campaigns, and re-engagement strategies.",
+    "Improve brand awareness": "Leverage influencer partnerships, social media, and display advertising to raise visibility.",
+    "Increase sales volume": "Utilize targeted promotions, upselling, and cross-selling tactics to drive sales."
+}
+
+# -------------------------------
 # SIDEBAR: CLIENT INPUTS
 # -------------------------------
 st.sidebar.header("Client Inputs")
@@ -175,7 +185,7 @@ for obj, angle_deg in angles.items():
     node_text.append(obj)
     hover_info = f"{obj}: {objectives[obj]['Strategic Imperatives']}"
     node_hover.append(hover_info)
-    # Highlight the top priority node from the selectbox
+    # Highlight the top priority node
     if obj == top_priority:
         node_color.append("red")
         node_size.append(20)
@@ -332,16 +342,55 @@ radar_fig.update_layout(
 st.plotly_chart(radar_fig, use_container_width=True)
 
 # -------------------------------
-# CASE STUDY & RECOMMENDATIONS
+# DYNAMIC INSIGHTS BASED ON LIFECYCLE & MARKETING PRIORITIES
 # -------------------------------
-st.subheader("Case Study & Benchmarking")
-case_study_text = f"Based on your top priority of **{top_priority}**, our client [Placeholder] achieved remarkable results by aligning their strategy accordingly."
-st.write(f"**Case Study:** {case_study_text}")
+st.subheader("Additional Strategic Insights")
 
-# Dynamic recommendation text based on lifecycle and industry
+# Lifecycle-based recommendation
+lifecycle_recs = {
+    "New": "Being in the New stage, it's essential to focus on building brand awareness and testing your messaging across channels.",
+    "Growing": "As a Growing brand, scaling your customer acquisition while optimizing retention becomes critical.",
+    "Mature": "Mature brands should fine-tune their spend efficiency and deepen customer relationships to sustain profitability.",
+    "Declining": "For a Declining brand, consider a strategic overhaul—revitalize your campaigns and re-engage your audience."
+}
+lifecycle_text = lifecycle_recs.get(brand_lifecycle, "")
+
+# Marketing priority recommendations (if any)
+priority_texts = []
+for priority in marketing_priorities:
+    rec = marketing_priority_recs.get(priority, "")
+    if rec:
+        priority_texts.append(f"- **{priority}**: {rec}")
+
+if priority_texts:
+    marketing_text = "\n".join(priority_texts)
+else:
+    marketing_text = "No specific marketing priority recommendations selected."
+
+st.markdown(f"**Lifecycle Insight:** {lifecycle_text}")
+st.markdown(f"**Marketing Priority Recommendations:**\n{marketing_text}")
+
+# Dynamic recommendation based on lifecycle and industry (from our mapping)
 rec_key = (brand_lifecycle, industry_type)
-rec_message = recommendation_mapping.get(rec_key, "Tailor your approach based on industry trends and your brand's lifecycle.")
-st.markdown(f"**Recommendation:** {rec_message}")
+dynamic_rec = recommendation_mapping.get(rec_key, "Tailor your approach based on industry trends and your brand's lifecycle.")
+st.markdown(f"**Overall Recommendation:** {dynamic_rec}")
+
+# -------------------------------
+# AUTOMATICALLY GENERATED PLAN SUMMARY
+# -------------------------------
+st.subheader("Plan Summary")
+plan_summary = (
+    f"Based on your inputs, your top priority is **{top_priority}**, and your brand is currently in the **{brand_lifecycle}** stage "
+    f"within the **{industry_type}** industry. With marketing priorities focused on {', '.join(marketing_priorities) if marketing_priorities else 'a balanced approach'}, "
+    f"we recommend that you {objectives[top_priority]['Strategic Imperatives'].lower()}. "
+    f"Our analysis suggests leveraging a channel mix that emphasizes key areas such as "
+    f"{', '.join(channels)}—as shown in the radar chart. "
+    f"Additionally, by focusing on the recommendations for both your lifecycle stage and the selected marketing priorities, "
+    f"you can optimize your media spend and drive better customer engagement. "
+    f"This comprehensive strategy aims to build awareness, boost conversions, and ensure sustainable growth."
+)
+
+st.markdown(plan_summary)
 
 # -------------------------------
 # PROFESSIONAL REPORTING: DOWNLOADABLE REPORT
@@ -363,11 +412,17 @@ report = f"""
 ## Recommended Channel Mix (for {industry_type})
 {chr(10).join([f"- {channel}: {value}" for channel, value in channel_mix[industry_type].items()])}
 
+## Additional Insights
+- **Lifecycle Insight:** {lifecycle_text}
+- **Marketing Recommendations:**  
+{chr(10).join([f"  {txt}" for txt in priority_texts])}
+- **Overall Recommendation:** {dynamic_rec}
+
+## Plan Summary
+{plan_summary}
+
 ## Case Study
 Our client [Placeholder] achieved remarkable results by aligning their paid media strategy with **{top_priority}**.
-
-## Recommendations
-{rec_message}
 """
 
 st.download_button(
