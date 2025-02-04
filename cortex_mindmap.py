@@ -475,14 +475,16 @@ def generate_ai_insight(context, base_summary):
         f"Generate a concise, professional analysis of the recommended paid media plan."
     )
     try:
-        response = openai.Completion.create(
-            model="gpt-4o min",  # use your preferred model here
-            prompt=prompt,
+        response = openai.ChatCompletion.create(
+            model="gpt-4o min",  # or your preferred model
+            messages=[
+                {"role": "system", "content": "You are a professional media strategy consultant."},
+                {"role": "user", "content": prompt}
+            ],
             max_tokens=150,
-            temperature=0.7,
-            n=1
+            temperature=0.7
         )
-        generated_text = response.choices[0].text.strip()
+        generated_text = response.choices[0].message.content.strip()
         return generated_text
     except Exception as e:
         return "Error generating AI insight: " + str(e)
@@ -503,13 +505,14 @@ def generate_pdf(report_text):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
-    # To handle any non-latin1 characters, encode with replacement.
+    # Process each line, encoding with replacement for unsupported characters.
     for line in report_text.split('\n'):
         safe_line = line.encode("latin1", "replace").decode("latin1")
         pdf.multi_cell(0, 10, txt=safe_line)
-    pdf_buffer = io.BytesIO()
-    pdf.output(pdf_buffer)
-    return pdf_buffer.getvalue()
+    # Instead of writing directly to a buffer, output as string and then encode.
+    pdf_output_str = pdf.output(dest="S")
+    pdf_bytes = pdf_output_str.encode("latin1", "replace")
+    return pdf_bytes
 
 report_text = f"""
 Cortex Plan Report
