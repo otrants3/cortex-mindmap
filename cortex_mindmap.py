@@ -155,10 +155,9 @@ def compute_normalized_allocation(vertical, top_priority):
 def generate_flighting_patterns(channels, n_months, vertical, top_priority):
     prompt = (
         f"Generate a JSON object where the keys are the following channel names: {channels}. "
-        f"For each channel, output a list of {n_months} integers that represent the percentage distribution "
-        f"of the channel's investment over {n_months} months for a campaign in the {vertical} vertical with a top priority of {top_priority}. "
-        f"Each list must sum to 100 and reflect a realistic seasonal flighting pattern for this industry. "
-        f"Return only valid JSON."
+        f"For each channel, output a list of {n_months} integers representing the percentage distribution of that channel's "
+        f"investment over {n_months} months for a campaign in the {vertical} vertical with a top priority of {top_priority}. "
+        f"Each list must sum to 100 and reflect realistic seasonal fluctuations for this industry. Return only valid JSON."
     )
     try:
         response = openai.ChatCompletion.create(
@@ -262,7 +261,7 @@ else:
     st.info("Please select a Top Priority Objective to view its details.")
 
 # -------------------------------
-# TWO PIE CHARTS FOR CHANNEL ALLOCATION
+# PIE CHARTS FOR CHANNEL ALLOCATION
 # -------------------------------
 st.subheader("Channel Allocation Comparison")
 base_colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3',
@@ -308,26 +307,7 @@ st.subheader("Flighting: Investment by Month")
 n_months = ((campaign_end - campaign_start).days // 30) + 1
 month_labels = [f"Month {i+1}" for i in range(n_months)]
 
-def generate_flighting_patterns(channels, n_months, vertical, top_priority):
-    prompt = (
-        f"Generate a JSON object where the keys are the following channel names: {channels}. "
-        f"For each channel, output a list of {n_months} integers representing the percentage distribution of that channel's "
-        f"investment over {n_months} months for a campaign in the {vertical} vertical with a top priority of {top_priority}. "
-        f"Each list must sum to 100 and reflect realistic seasonal fluctuations for this industry. Return only valid JSON."
-    )
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=300,
-            temperature=0.7,
-        )
-        result = response.choices[0].message.content.strip()
-        patterns = json.loads(result)
-        return patterns
-    except Exception as e:
-        return None
-
+# Generate flighting patterns via AI
 channels_flighting = list(updated_allocation.keys())
 flighting_patterns = generate_flighting_patterns(channels_flighting, n_months, vertical, top_priority)
 flighting_data = {}
@@ -368,7 +348,7 @@ for ch in channels_flighting:
     total_channel = sum(monthly_investments)
     flighting_table.append({
         "Channel": ch,
-        "Monthly Investment ($)": f"${[f'{m:,.0f}' for m in monthly_investments]}",
+        "Monthly Investment ($)": f"{[f'${m:,.0f}' for m in monthly_investments]}",
         "Total Investment ($)": f"${total_channel:,.0f}"
     })
 flighting_df = pd.DataFrame(flighting_table)
@@ -390,10 +370,10 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
     full_context = (
         f"You are a professional paid media and marketing consultant with deep expertise in the {vertical} vertical and a strong alignment with Junction 37's approach. "
         f"Generate a final plan summary that includes two parts: first, a 'TLDR:' section with a one-sentence summary; then an expanded analysis (2-3 paragraphs) that includes:\n"
-        f"1. Creative Themes (3-5 themes that align with the target audiences),\n"
-        f"2. Key Audiences: list 3 key prospecting audiences and 3 key conversion audiences with reasoning and credible article links,\n"
-        f"3. Suggested Flighting: provide recommendations on how the investment should be distributed over the campaign duration,\n"
-        f"and finally, include 5 specific, real, credible marketing article links (from sources such as Ad Age, Marketing Land, Adweek, HubSpot Marketing, and Marketing Dive).\n\n"
+        f"1. Creative Themes: List 3-5 creative themes that align with the target audiences.\n"
+        f"2. Key Audiences: List 3 key prospecting audiences and 3 key conversion audiences, with reasoning supported by credible marketing articles.\n"
+        f"3. Suggested Flighting: Provide recommendations for how the investment should be distributed over the campaign duration.\n"
+        f"Finally, include 5 specific, real, credible marketing article links from sources such as Ad Age, Marketing Land, Adweek, HubSpot Marketing, and Marketing Dive.\n\n"
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
         f"Additional Business Info: {additional_business_info}\n"
@@ -426,10 +406,13 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
     except Exception as e:
         return "Error generating AI insight: " + str(e)
 
-base_plan_summary = (
-    f"Your top priority is {top_priority} for a brand in the {brand_lifecycle} stage operating in the {vertical} vertical. "
-    f"Recommended actions include {objectives[top_priority]['Strategic Imperatives'].lower()} and leveraging a channel mix updated based on client inputs."
-)
+if top_priority != "-":
+    base_plan_summary = (
+        f"Your top priority is {top_priority} for a brand in the {brand_lifecycle} stage operating in the {vertical} vertical. "
+        f"Recommended actions include {objectives[top_priority]['Strategic Imperatives'].lower()} and leveraging a channel mix updated based on client inputs."
+    )
+else:
+    base_plan_summary = "No top priority objective selected."
 
 if "final_plan" not in st.session_state:
     st.session_state.final_plan = base_plan_summary
@@ -492,16 +475,16 @@ Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities e
 Creative Formats Available: {', '.join(creative_formats) if creative_formats else 'None'}
 
 Strategic Details:
-- Strategic Imperatives: {objectives[top_priority]['Strategic Imperatives']}
-- KPIs: {objectives[top_priority]['KPIs']}
-- Core Audiences: {objectives[top_priority]['Core Audiences']}
-- Messaging Approach: {objectives[top_priority]['Messaging Approach']}
+- Strategic Imperatives: {objectives[top_priority]['Strategic Imperatives'] if top_priority != "-" else "N/A"}
+- KPIs: {objectives[top_priority]['KPIs'] if top_priority != "-" else "N/A"}
+- Core Audiences: {objectives[top_priority]['Core Audiences'] if top_priority != "-" else "N/A"}
+- Messaging Approach: {objectives[top_priority]['Messaging Approach'] if top_priority != "-" else "N/A"}
 
 Recommended Channel Mix (for {vertical}):
-""" + "\n".join([f"- {channel}: {vertical_channel_mix[vertical][channel]}" for channel in vertical_channel_mix[vertical].keys()]) + f"""
+""" + "\n".join([f"- {channel}: {vertical_channel_mix[vertical][channel]}" for channel in vertical_channel_mix.get(vertical, {})]) + f"""
 
 Updated Channel Allocations:
-""" + "\n".join([f"- {channel}: {updated_allocation.get(channel, 0)}" for channel in updated_allocation.keys()]) + f"""
+""" + "\n".join([f"- {channel}: {updated_allocation.get(channel, 0)}" for channel in updated_allocation]) + f"""
 
 Final Plan Summary:
 {st.session_state.final_plan}
