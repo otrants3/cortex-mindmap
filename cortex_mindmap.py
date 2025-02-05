@@ -8,11 +8,11 @@ import openai
 import os
 import datetime
 
-# Load API key from Streamlit Cloud secrets.
+# Load API key (do not print it)
 openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
 # -------------------------------
-# CUSTOM CSS FOR VISUAL APPEAL & POINTER CURSOR ON DROPDOWNS
+# CUSTOM CSS FOR VISUAL APPEAL & POINTER CURSOR
 # -------------------------------
 st.markdown(
     """
@@ -38,7 +38,6 @@ st.markdown(
         padding: 0.5em 1em;
         border-radius: 5px;
     }
-    /* Change cursor on select boxes */
     div[data-baseweb="select"] {
         cursor: pointer;
     }
@@ -126,9 +125,6 @@ vertical_channel_mix = {
                    "OOH/DOOH": 25, "Audio": 10}
 }
 
-# -------------------------------
-# OBJECTIVE-BASED ADJUSTMENT MULTIPLIERS & NORMALIZATION FUNCTION
-# -------------------------------
 objective_adjustments = {
     "Awareness": {"Paid Social": 1.2, "Online Video": 1.1, "Retail Media": 1.1},
     "Growth": {"Paid Search": 1.2, "Programmatic Display": 1.1, "Online Video": 1.1},
@@ -156,74 +152,56 @@ def compute_normalized_allocation(vertical, top_priority):
 # -------------------------------
 st.sidebar.header("Client Inputs")
 
-# Business info
 brand_name = st.sidebar.text_input("Brand Name", "-")
 business_problem = st.sidebar.text_area("Business Problem", "-")
 additional_business_info = st.sidebar.text_area("Additional Business Info", "-")
 
-# Investment Range as two number inputs with currency formatting
 investment_low = st.sidebar.number_input("Investment Range - Low-end ($)", min_value=0, max_value=100000000, value=100000, step=1000, format="%d")
 investment_high = st.sidebar.number_input("Investment Range - High-end ($)", min_value=0, max_value=100000000, value=200000, step=1000, format="%d")
 
-# Campaign dates
 campaign_start = st.sidebar.date_input("Campaign Start Date", datetime.date.today())
 campaign_end = st.sidebar.date_input("Campaign End Date", datetime.date.today() + datetime.timedelta(days=30))
 
-# Client Vertical with "-" as default
 vertical = st.sidebar.selectbox("Client Vertical", ["-","Other", "Travel", "CPG", "Finance", "Technology", "Retail", "Healthcare", "Education", "Hospitality", "Automotive"], index=0)
-
-# Top Priority Objective with "-" as default
 top_priority = st.sidebar.selectbox("Top Priority Objective", ["-"] + list(objectives.keys()), index=0)
-
-# Brand Lifecycle Stage with "-" as default
 brand_lifecycle = st.sidebar.selectbox("Brand Lifecycle Stage", ["-", "New", "Growing", "Mature", "Declining"], index=0)
-
-# Marketing Priorities (multiselect without default)
-marketing_priorities = st.sidebar.multiselect("Marketing Priorities", 
-    ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"], default=[])
-
-# Creative Formats Available (multiselect without default)
-creative_formats = st.sidebar.multiselect("Creative Formats Available", 
-    ["OLV", "Static Images", "TV", "Interactive", "Audio"], default=[])
+marketing_priorities = st.sidebar.multiselect("Marketing Priorities", ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"], default=[])
+creative_formats = st.sidebar.multiselect("Creative Formats Available", ["OLV", "Static Images", "TV", "Interactive", "Audio"], default=[])
 
 # -------------------------------
-# NORMALIZE DEFAULT ALLOCATION
+# NORMALIZE ALLOCATION
 # -------------------------------
 normalized_allocation = compute_normalized_allocation(vertical, top_priority)
 
-# -------------------------------
-# INVESTMENT CALCULATIONS: ORIGINAL INVESTMENT BY CHANNEL
-# -------------------------------
+# Compute mid-range investment and original investment by channel
 mid_investment = (investment_low + investment_high) / 2
 original_investment_by_channel = {ch: mid_investment * (normalized_allocation[ch] / 100) for ch in normalized_allocation}
 
 # -------------------------------
-# MANUAL ALLOCATION ADJUSTMENTS (Right-side)
+# MANUAL ALLOCATION ADJUSTMENTS (User Inputs)
 # -------------------------------
-st.sidebar.subheader("Manual Allocation Adjustments")
-updated_allocation = {}
 if top_priority != "-" and normalized_allocation:
+    st.sidebar.subheader("Manual Allocation Adjustments")
+    updated_allocation = {}
     for ch, default_val in normalized_allocation.items():
         updated_allocation[ch] = st.sidebar.number_input(f"Allocation for {ch} (%)", min_value=0, max_value=100, value=int(round(default_val)), step=1, format="%d")
 else:
     updated_allocation = {}
 
-# Check if updated allocations sum to 100%
 total_alloc = sum(updated_allocation.values())
-if total_alloc != 100:
+if updated_allocation and total_alloc != 100:
     st.sidebar.warning(f"Total allocation is {total_alloc}%. It should sum to 100%.")
 
-# Compute updated investment by channel.
 if updated_allocation:
     updated_investment_by_channel = {ch: mid_investment * (updated_allocation[ch] / 100) for ch in updated_allocation}
 else:
     updated_investment_by_channel = original_investment_by_channel.copy()
 
 # -------------------------------
-# HEADER & SUMMARY OF INPUTS
+# SUMMARY OF CLIENT INPUTS
 # -------------------------------
 st.markdown('<h1 class="main-title">Cortex: Professional Paid Media Strategy Tool</h1>', unsafe_allow_html=True)
-st.write("Use the sidebar to input your business criteria. Adjust channel allocations manually (they must sum to 100%). When ready, click **Run Plan** (in the sidebar) to generate your tailored strategy. Then, download a detailed PDF report.")
+st.write("Use the sidebar to input your business criteria and manually adjust channel allocations (which must sum to 100%). When ready, click **Run Plan** (in the sidebar) to generate your tailored strategy, then download a detailed PDF report.")
 
 st.subheader("Your Inputs")
 st.write(f"**Brand Name:** {brand_name}")
@@ -239,7 +217,7 @@ st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketi
 st.write(f"**Creative Formats Available:** {', '.join(creative_formats) if creative_formats else 'None'}")
 
 # -------------------------------
-# OBJECTIVE DETAILS (Simple Table)
+# DISPLAY OBJECTIVE DETAILS (Simple Table)
 # -------------------------------
 if top_priority != "-":
     st.subheader("Objective Details")
@@ -258,67 +236,81 @@ else:
     st.info("Please select a Top Priority Objective to view its details.")
 
 # -------------------------------
-# INTERACTIVE RADAR CHART (Original vs. Updated Allocation)
+# TWO PIE CHARTS FOR CHANNEL ALLOCATION
 # -------------------------------
 st.subheader("Channel Allocation Comparison")
 
-channels_list = list(normalized_allocation.keys())
-original_values = [normalized_allocation[ch] for ch in channels_list]
-updated_values = [updated_allocation.get(ch, 0) for ch in channels_list]
+# Original Allocation Pie Chart
+pie_original = go.Figure(data=[go.Pie(
+    labels=list(normalized_allocation.keys()),
+    values=list(normalized_allocation.values()),
+    marker=dict(colors=["#002561" for _ in normalized_allocation])
+)])
+pie_original.update_layout(title="Original Allocation (Normalized)")
 
-radar_fig = go.Figure()
+# Updated Allocation Pie Chart (if provided)
+if updated_allocation:
+    pie_updated = go.Figure(data=[go.Pie(
+        labels=list(updated_allocation.keys()),
+        values=list(updated_allocation.values()),
+        marker=dict(colors=["#EC155A" for _ in updated_allocation])
+    )])
+    pie_updated.update_layout(title="Updated Allocation (Manual)")
+else:
+    pie_updated = go.Figure(data=[go.Pie(
+        labels=list(normalized_allocation.keys()),
+        values=list(normalized_allocation.values()),
+        marker=dict(colors=["#EC155A" for _ in normalized_allocation])
+    )])
+    pie_updated.update_layout(title="Updated Allocation (Same as Original)")
 
-radar_fig.add_trace(go.Scatterpolar(
-    r=original_values,
-    theta=channels_list,
-    fill='toself',
-    fillcolor="rgba(0,37,97,0.3)",  # J37 secondary color (30% opacity)
-    line_color="#002561",
-    name='Original Allocation'
-))
+st.plotly_chart(pie_original, use_container_width=True)
+st.plotly_chart(pie_updated, use_container_width=True)
 
-radar_fig.add_trace(go.Scatterpolar(
-    r=updated_values,
-    theta=channels_list,
-    fill='toself',
-    fillcolor="rgba(236,21,90,0.3)",  # J37 primary color (30% opacity)
-    line_color="#EC155A",
-    name='Updated Allocation'
-))
+# -------------------------------
+# FLIGHTING LINE GRAPH: INVESTMENT BY MONTH PER CHANNEL
+# -------------------------------
+st.subheader("Flighting: Investment by Month")
+# Compute campaign duration in months (approximate)
+n_months = ((campaign_end - campaign_start).days // 30) + 1
+month_labels = [f"Month {i+1}" for i in range(n_months)]
+# For each channel in updated_allocation, assume uniform distribution of investment over months.
+flighting_data = {}
+for ch in updated_allocation:
+    monthly = updated_investment_by_channel.get(ch, 0) / n_months
+    flighting_data[ch] = [monthly] * n_months
 
-radar_fig.update_layout(
-    polar=dict(
-        radialaxis=dict(
-            visible=True,
-            range=[0, 100]
-        )
-    ),
-    showlegend=True,
-    title=f"Channel Mix for {vertical} Brands"
+flighting_fig = go.Figure()
+for ch, investments in flighting_data.items():
+    flighting_fig.add_trace(go.Scatter(
+        x=month_labels,
+        y=investments,
+        mode='lines+markers',
+        name=ch
+    ))
+flighting_fig.update_layout(
+    title="Monthly Investment by Channel (Uniform Distribution)",
+    xaxis_title="Month",
+    yaxis_title="Investment ($)",
+    yaxis=dict(tickprefix="$")
 )
+st.plotly_chart(flighting_fig, use_container_width=True)
 
-st.plotly_chart(radar_fig, use_container_width=True, config={"editable": True})
-
-# Display investment by channel as a table.
-investment_df = pd.DataFrame({
-    "Channel": channels_list,
-    "Original Allocation (%)": original_values,
-    "Updated Allocation (%)": updated_values,
-    "Original Investment ($)": [f"${original_investment_by_channel[ch]:,.0f}" for ch in channels_list],
-    "Updated Investment ($)": [f"${updated_investment_by_channel.get(ch, 0):,.0f}" for ch in channels_list]
-})
-total_original = sum(original_investment_by_channel[ch] for ch in channels_list)
-total_updated = sum(updated_investment_by_channel.get(ch, 0) for ch in channels_list)
+# Also display flighting table.
+flighting_table = []
+for ch in updated_allocation:
+    monthly = updated_investment_by_channel.get(ch, 0) / n_months
+    flighting_table.append({"Channel": ch, "Monthly Investment ($)": f"${monthly:,.0f}", "Total Investment ($)": f"${updated_investment_by_channel.get(ch, 0):,.0f}"})
+flighting_df = pd.DataFrame(flighting_table)
+total_flight = sum(updated_investment_by_channel.get(ch, 0) for ch in updated_allocation)
 total_row = pd.DataFrame({
     "Channel": ["Total"],
-    "Original Allocation (%)": [round(sum(original_values), 2)],
-    "Updated Allocation (%)": [round(sum(updated_values), 2)],
-    "Original Investment ($)": [f"${total_original:,.0f}"],
-    "Updated Investment ($)": [f"${total_updated:,.0f}"]
+    "Monthly Investment ($)": [f"${sum(float(row['Monthly Investment ($)'].replace('$','').replace(',','')) for _, row in flighting_df.iterrows()):,.0f}"],
+    "Total Investment ($)": [f"${total_flight:,.0f}"]
 })
-investment_df = pd.concat([investment_df, total_row], ignore_index=True)
-st.subheader("Investment Allocation by Channel")
-st.table(investment_df)
+flighting_df = pd.concat([flighting_df, total_row], ignore_index=True)
+st.subheader("Flighting Investment Table")
+st.table(flighting_df)
 
 # -------------------------------
 # FINAL AI GENERATED PLAN SUMMARY (Unified)
@@ -332,11 +324,16 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
         with open("reference.txt", "r", encoding="utf-8") as f:
             reference_content = f.read()
     
+    # Instruct the AI to include a TLDR, then expanded analysis with creative themes,
+    # key audiences for prospecting (3) and conversion (3), a suggested flighting section,
+    # and 5 specific credible marketing article links.
     full_context = (
-        f"You are a professional paid media and marketing consultant with deep expertise in the {vertical} vertical and Junction 37's strategic approach. "
-        f"Generate a final plan summary that includes two parts: first, a 'TLDR:' section with a one-sentence summary; then an expanded analysis (2-3 paragraphs) "
-        f"that includes a Creative Themes section (3-5 themes), Key Audiences for both prospecting and conversion (3-5 each), and a Suggested Flighting section "
-        f"that leverages external data insights (e.g., Google Trends) and includes 5 specific, relevant resource links. Tailor your output to the client's inputs below.\n\n"
+        f"You are a professional paid media and marketing consultant with deep expertise in the {vertical} vertical and a strong alignment with Junction 37's approach. "
+        f"Generate a final plan summary that includes two parts: first, a 'TLDR:' section with a one-sentence summary; then an expanded analysis (2-3 paragraphs) that includes the following sections:\n"
+        f"1. Creative Themes (3-5 themes that align with the target audiences).\n"
+        f"2. Key Audiences: List 3 key prospecting audiences and 3 key conversion audiences with reasoning and relevant article links.\n"
+        f"3. Suggested Flighting: Provide a recommendation for how the investment should be distributed over the campaign duration.\n"
+        f"At the end, include 5 specific, real, credible marketing article links (for example, from https://www.adage.com, https://www.marketingland.com, https://www.adweek.com, https://www.hubspot.com/marketing, https://www.marketingdive.com).\n\n"
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
         f"Additional Business Info: {additional_business_info}\n"
@@ -352,16 +349,16 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
         f"Top Priority Objective: {top_priority}\n"
         f"Brand Lifecycle Stage: {brand_lifecycle}\n\n"
         f"Base strategy summary: {base_summary}\n\n"
-        f"Generate a final plan summary with a TLDR section (one sentence) and an expanded analysis (2-3 paragraphs) that includes 5 specific relevant resource links."
+        f"Generate a final plan summary as specified."
     )
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a professional paid media and marketing consultant with expertise in the client's vertical and a deep understanding of Junction 37's approach."},
+                {"role": "system", "content": "You are a professional paid media and marketing consultant with deep expertise in the client's vertical and Junction 37's approach."},
                 {"role": "user", "content": full_context}
             ],
-            max_tokens=400,
+            max_tokens=1000,
             temperature=0.7
         )
         generated_text = response.choices[0].message.content.strip()
