@@ -6,11 +6,12 @@ from fpdf import FPDF
 import io
 import openai
 import os
+import datetime
 
 # Load the API key from Streamlit Cloud secrets.
 openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
-# (Optional) Debug: show only the first few characters of the API key.
+# (Optional) Debug: show first 4 characters of API key.
 st.write(f"API Key loaded: {openai.api_key[:4]}...")
 
 # -------------------------------
@@ -247,8 +248,12 @@ brand_name = st.sidebar.text_input("Brand Name", "Enter the brand name here...")
 business_problem = st.sidebar.text_area("Business Problem", "Describe the business problem you are trying to solve...")
 additional_business_info = st.sidebar.text_area("Additional Business Info", "Enter any additional info about the brand or strategy here...")
 
-# New field for Investment Range (in dollars)
-investment_range = st.sidebar.slider("Investment Range ($)", 0, 1000000, 100000, step=10000)
+# New field for Investment Range (in dollars; max = $100,000,000)
+investment_range = st.sidebar.slider("Investment Range ($)", 0, 100000000, 100000, step=10000, format="%d")
+
+# New fields for Campaign Start/End Date
+campaign_start = st.sidebar.date_input("Campaign Start Date", datetime.date.today())
+campaign_end = st.sidebar.date_input("Campaign End Date", datetime.date.today() + datetime.timedelta(days=30))
 
 # New field for Client Vertical (10 options)
 vertical = st.sidebar.selectbox("Client Vertical", 
@@ -271,6 +276,10 @@ updated_allocation = {}
 for channel, value in original_allocation.items():
     updated_allocation[channel] = st.sidebar.slider(f"Allocation for {channel}", 0, 100, value, step=1)
 
+# Add a reset button for radar chart view
+if st.sidebar.button("Reset Radar Chart View"):
+    st.experimental_rerun()
+
 # -------------------------------
 # HEADER & INSTRUCTIONS
 # -------------------------------
@@ -282,6 +291,8 @@ st.write(f"**Brand Name:** {brand_name}")
 st.write(f"**Business Problem:** {business_problem}")
 st.write(f"**Additional Business Info:** {additional_business_info}")
 st.write(f"**Investment Range:** ${investment_range:,}")
+st.write(f"**Campaign Start Date:** {campaign_start}")
+st.write(f"**Campaign End Date:** {campaign_end}")
 st.write(f"**Client Vertical:** {vertical}")
 st.write(f"**Top Priority Objective:** {top_priority}")
 st.write(f"**Brand Lifecycle Stage:** {brand_lifecycle}")
@@ -313,7 +324,7 @@ node_hover = []
 node_color = []
 node_size = []
 
-# 1. Central Node
+# Central node
 node_x.append(center_x)
 node_y.append(center_y)
 node_text.append("Paid Media Strategy")
@@ -321,7 +332,7 @@ node_hover.append("Central Strategy Node")
 node_color.append("black")
 node_size.append(25)
 
-# 2. Main Nodes for each objective
+# Main nodes for each objective
 main_positions = {}
 main_angles = {}
 
@@ -343,7 +354,7 @@ for obj, angle_deg in angles.items():
         node_color.append("#002561")  # J37 secondary color
         node_size.append(15)
 
-# 3. Sub-Nodes for the top priority objective
+# Sub-nodes for the top priority objective
 sub_nodes = []
 if top_priority in main_positions:
     sub_node_labels = ["Strategic Imperatives", "KPIs", "Core Audiences", "Messaging Approach"]
@@ -365,7 +376,7 @@ if top_priority in main_positions:
         node_color.append("#EC155A")
         node_size.append(12)
 
-# 4. Detail Nodes branching off each sub-node
+# Detail nodes branching off each sub-node
 for sub in sub_nodes:
     sx, sy, sub_label, sub_hover, base_angle = sub
     detail_str = objectives[top_priority][sub_label]
@@ -402,6 +413,7 @@ fig.add_trace(go.Scatter(
     hoverinfo="text"
 ))
 
+# Connect central node to main nodes
 for obj, pos in main_positions.items():
     fig.add_shape(
         type="line",
@@ -410,6 +422,7 @@ for obj, pos in main_positions.items():
         line=dict(color="lightgrey", width=2)
     )
 
+# Connect top priority main node to its sub-nodes
 if top_priority in main_positions:
     main_pos = main_positions[top_priority]
     for sub in sub_nodes:
@@ -421,6 +434,7 @@ if top_priority in main_positions:
             line=dict(color="lightgrey", width=1.5)
         )
 
+# Connect sub-nodes to detail nodes
 for sub in sub_nodes:
     sx, sy, sub_label, _, base_angle = sub
     detail_str = objectives[top_priority][sub_label]
@@ -469,7 +483,7 @@ radar_fig.add_trace(go.Scatterpolar(
     r=original_values,
     theta=channels_list,
     fill='toself',
-    fillcolor="rgba(0,37,97,0.3)",  # Secondary color at 30% opacity
+    fillcolor="rgba(0,37,97,0.3)",  # J37 secondary color (30% opacity)
     line_color="#002561",
     name='Original Allocation'
 ))
@@ -478,7 +492,7 @@ radar_fig.add_trace(go.Scatterpolar(
     r=updated_values,
     theta=channels_list,
     fill='toself',
-    fillcolor="rgba(236,21,90,0.3)",  # Primary color at 30% opacity
+    fillcolor="rgba(236,21,90,0.3)",  # J37 primary color (30% opacity)
     line_color="#EC155A",
     name='Updated Allocation'
 ))
@@ -494,7 +508,8 @@ radar_fig.update_layout(
     title=f"Channel Mix for {vertical} Brands (Based on Client Inputs)"
 )
 
-st.plotly_chart(radar_fig, use_container_width=True)
+# Enable editing (if supported) so that points can be manually adjusted.
+st.plotly_chart(radar_fig, use_container_width=True, config={"editable": True})
 
 st.subheader("Allocation Comparison")
 allocation_df = pd.DataFrame({
@@ -509,22 +524,25 @@ st.table(allocation_df)
 # -------------------------------
 st.subheader("Final Plan Summary")
 
-def generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats, investment_range, updated_allocations, base_summary):
-    # Optionally, read reference content from a file for extra context.
+def generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats, investment_range, campaign_start, campaign_end, updated_allocations, base_summary):
+    # If a reference file exists, include its content.
     reference_content = ""
     if os.path.exists("reference.txt"):
         with open("reference.txt", "r", encoding="utf-8") as f:
             reference_content = f.read()
     
     full_context = (
-        f"You are a professional paid media and marketing consultant. Using Junction 37's expertise, generate a final plan summary with two parts. "
-        f"First, include a 'TLDR:' section that provides a one-sentence summary. Then, provide an expanded section (2-3 paragraphs) with actionable insights, "
-        f"relevant links to articles or resources, and creative recommendations tailored to the client's business problem, vertical, investment range, and available creative formats.\n\n"
+        f"You are a professional paid media and marketing consultant with deep expertise in the {vertical} vertical. "
+        f"Using Junction 37's strategy framework, generate a final plan summary that includes two parts. First, a 'TLDR:' section with a one-sentence summary, "
+        f"and then an expanded section (2-3 paragraphs) with actionable insights, creative recommendations, and 5 specific, relevant article/resource links. "
+        f"Tailor the output to address the client's business problem, investment range, campaign dates, and available creative formats.\n\n"
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
         f"Additional Business Info: {additional_business_info}\n"
         f"Client Vertical: {vertical}\n"
         f"Investment Range: ${investment_range:,}\n"
+        f"Campaign Start Date: {campaign_start}\n"
+        f"Campaign End Date: {campaign_end}\n"
         f"Creative Formats Available: {', '.join(creative_formats) if creative_formats else 'None'}\n"
         f"Marketing Priorities: {', '.join(marketing_priorities) if marketing_priorities else 'None'}\n"
         f"Updated Channel Allocations: " + ", ".join([f"{ch}: {updated_allocations[ch]}" for ch in updated_allocations]) + "\n"
@@ -539,7 +557,7 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a professional paid media and marketing consultant."},
+                {"role": "system", "content": "You are a professional paid media and marketing consultant with expertise in the client's vertical."},
                 {"role": "user", "content": full_context}
             ],
             max_tokens=300,
@@ -562,7 +580,7 @@ if "final_plan" not in st.session_state:
 if st.button("Update Final Plan"):
     st.session_state.final_plan = generate_full_plan(
         brand_name, business_problem, additional_business_info, vertical, creative_formats,
-        investment_range, updated_allocation, base_plan_summary
+        investment_range, campaign_start, campaign_end, updated_allocation, base_plan_summary
     )
 
 st.markdown(st.session_state.final_plan)
@@ -588,6 +606,9 @@ Brand Name: {brand_name}
 Business Problem: {business_problem}
 Additional Business Info: {additional_business_info}
 Investment Range: ${investment_range:,}
+
+Campaign Start Date: {campaign_start}
+Campaign End Date: {campaign_end}
 
 Top Priority Objective: {top_priority}
 Brand Lifecycle Stage: {brand_lifecycle}
