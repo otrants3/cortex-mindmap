@@ -7,8 +7,9 @@ import io
 import openai
 import os
 import datetime
+import json
 
-# Load API key (do not print it)
+# Load API key from Streamlit Cloud secrets (do not print the full key)
 openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
 # -------------------------------
@@ -38,6 +39,7 @@ st.markdown(
         padding: 0.5em 1em;
         border-radius: 5px;
     }
+    /* Change cursor on select boxes */
     div[data-baseweb="select"] {
         cursor: pointer;
     }
@@ -148,6 +150,30 @@ def compute_normalized_allocation(vertical, top_priority):
     return normalized
 
 # -------------------------------
+# FUNCTION TO GENERATE FLIGHTING PATTERNS VIA AI
+# -------------------------------
+def generate_flighting_patterns(channels, n_months, vertical, top_priority):
+    prompt = (
+        f"Generate a JSON object where the keys are the following channel names: {channels}. "
+        f"For each channel, output a list of {n_months} integers that represent the percentage distribution "
+        f"of the channel's investment over {n_months} months for a campaign in the {vertical} vertical with a top priority of {top_priority}. "
+        f"Each list must sum to 100 and reflect a realistic seasonal flighting pattern for this industry. "
+        f"Return only valid JSON."
+    )
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=300,
+            temperature=0.7,
+        )
+        result = response.choices[0].message.content.strip()
+        patterns = json.loads(result)
+        return patterns
+    except Exception as e:
+        return None
+
+# -------------------------------
 # SIDEBAR: CLIENT INPUTS
 # -------------------------------
 st.sidebar.header("Client Inputs")
@@ -169,7 +195,7 @@ marketing_priorities = st.sidebar.multiselect("Marketing Priorities", ["Increase
 creative_formats = st.sidebar.multiselect("Creative Formats Available", ["OLV", "Static Images", "TV", "Interactive", "Audio"], default=[])
 
 # -------------------------------
-# NORMALIZE ALLOCATION
+# NORMALIZE DEFAULT ALLOCATION
 # -------------------------------
 normalized_allocation = compute_normalized_allocation(vertical, top_priority)
 
@@ -201,7 +227,7 @@ else:
 # SUMMARY OF CLIENT INPUTS
 # -------------------------------
 st.markdown('<h1 class="main-title">Cortex: Professional Paid Media Strategy Tool</h1>', unsafe_allow_html=True)
-st.write("Use the sidebar to input your business criteria and manually adjust channel allocations (which must sum to 100%). When ready, click **Run Plan** (in the sidebar) to generate your tailored strategy, then download a detailed PDF report.")
+st.write("Use the sidebar to input your business criteria and manually adjust channel allocations (which must sum to 100%). When ready, click **Run Plan** (in the sidebar) to generate your tailored strategy. Then, download a detailed PDF report.")
 
 st.subheader("Your Inputs")
 st.write(f"**Brand Name:** {brand_name}")
@@ -217,7 +243,7 @@ st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketi
 st.write(f"**Creative Formats Available:** {', '.join(creative_formats) if creative_formats else 'None'}")
 
 # -------------------------------
-# DISPLAY OBJECTIVE DETAILS (Simple Table)
+# DISPLAY OBJECTIVE DETAILS
 # -------------------------------
 if top_priority != "-":
     st.subheader("Objective Details")
@@ -237,16 +263,11 @@ else:
 
 # -------------------------------
 # TWO PIE CHARTS FOR CHANNEL ALLOCATION
+# -------------------------------
 st.subheader("Channel Allocation Comparison")
+base_colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3',
+               '#FF6692', '#B6E880', '#FF97FF', '#FECB52', '#1f77b4', '#ff7f0e']
 
-# Define a base palette of colors
-base_colors = [
-    '#636EFA', '#EF553B', '#00CC96', '#AB63FA',
-    '#FFA15A', '#19D3F3', '#FF6692', '#B6E880',
-    '#FF97FF', '#FECB52', '#1f77b4', '#ff7f0e'
-]
-
-# Original Allocation Pie Chart
 channels_original = list(normalized_allocation.keys())
 colors_original = [base_colors[i % len(base_colors)] for i in range(len(channels_original))]
 pie_original = go.Figure(data=[go.Pie(
@@ -256,7 +277,6 @@ pie_original = go.Figure(data=[go.Pie(
 )])
 pie_original.update_layout(title="Original Allocation (Normalized)")
 
-# Updated Allocation Pie Chart (if provided)
 if updated_allocation:
     channels_updated = list(updated_allocation.keys())
     colors_updated = [base_colors[i % len(base_colors)] for i in range(len(channels_updated))]
@@ -267,8 +287,8 @@ if updated_allocation:
     )])
     pie_updated.update_layout(title="Updated Allocation (Manual)")
 else:
-    channels_updated = list(normalized_allocation.keys())
-    colors_updated = [base_colors[i % len(base_colors)] for i in range(len(channels_updated))]
+    channels_updated = channels_original
+    colors_updated = colors_original
     pie_updated = go.Figure(data=[go.Pie(
         labels=channels_updated,
         values=list(normalized_allocation.values()),
@@ -280,17 +300,50 @@ st.plotly_chart(pie_original, use_container_width=True)
 st.plotly_chart(pie_updated, use_container_width=True)
 
 # -------------------------------
-# FLIGHTING LINE GRAPH: INVESTMENT BY MONTH PER CHANNEL
+# FLIGHTING LINE GRAPH: DYNAMIC INVESTMENT BY MONTH PER CHANNEL
 # -------------------------------
 st.subheader("Flighting: Investment by Month")
-# Compute campaign duration in months (approximate)
+
+# Calculate campaign duration in months (approximate)
 n_months = ((campaign_end - campaign_start).days // 30) + 1
 month_labels = [f"Month {i+1}" for i in range(n_months)]
-# For each channel in updated_allocation, assume uniform distribution of investment over months.
+
+def generate_flighting_patterns(channels, n_months, vertical, top_priority):
+    prompt = (
+        f"Generate a JSON object where the keys are the following channel names: {channels}. "
+        f"For each channel, output a list of {n_months} integers representing the percentage distribution of that channel's "
+        f"investment over {n_months} months for a campaign in the {vertical} vertical with a top priority of {top_priority}. "
+        f"Each list must sum to 100 and reflect realistic seasonal fluctuations for this industry. Return only valid JSON."
+    )
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=300,
+            temperature=0.7,
+        )
+        result = response.choices[0].message.content.strip()
+        patterns = json.loads(result)
+        return patterns
+    except Exception as e:
+        return None
+
+channels_flighting = list(updated_allocation.keys())
+flighting_patterns = generate_flighting_patterns(channels_flighting, n_months, vertical, top_priority)
 flighting_data = {}
-for ch in updated_allocation:
-    monthly = updated_investment_by_channel.get(ch, 0) / n_months
-    flighting_data[ch] = [monthly] * n_months
+if flighting_patterns is None:
+    st.warning("Could not generate dynamic flighting; using uniform distribution.")
+    for ch in channels_flighting:
+        monthly = updated_investment_by_channel.get(ch, 0) / n_months
+        flighting_data[ch] = [monthly] * n_months
+else:
+    for ch in channels_flighting:
+        pattern = flighting_patterns.get(ch)
+        if pattern and sum(pattern) == 100:
+            flighting_data[ch] = [updated_investment_by_channel.get(ch, 0) * (p / 100) for p in pattern]
+        else:
+            monthly = updated_investment_by_channel.get(ch, 0) / n_months
+            flighting_data[ch] = [monthly] * n_months
 
 flighting_fig = go.Figure()
 for ch, investments in flighting_data.items():
@@ -301,26 +354,24 @@ for ch, investments in flighting_data.items():
         name=ch
     ))
 flighting_fig.update_layout(
-    title="Monthly Investment by Channel (Uniform Distribution)",
+    title="Monthly Investment by Channel (Dynamic Flighting)",
     xaxis_title="Month",
     yaxis_title="Investment ($)",
     yaxis=dict(tickprefix="$")
 )
 st.plotly_chart(flighting_fig, use_container_width=True)
 
-# Also display flighting table.
+# Create a flighting table.
 flighting_table = []
-for ch in updated_allocation:
-    monthly = updated_investment_by_channel.get(ch, 0) / n_months
-    flighting_table.append({"Channel": ch, "Monthly Investment ($)": f"${monthly:,.0f}", "Total Investment ($)": f"${updated_investment_by_channel.get(ch, 0):,.0f}"})
+for ch in channels_flighting:
+    monthly_investments = flighting_data[ch]
+    total_channel = sum(monthly_investments)
+    flighting_table.append({
+        "Channel": ch,
+        "Monthly Investment ($)": f"${[f'{m:,.0f}' for m in monthly_investments]}",
+        "Total Investment ($)": f"${total_channel:,.0f}"
+    })
 flighting_df = pd.DataFrame(flighting_table)
-total_flight = sum(updated_investment_by_channel.get(ch, 0) for ch in updated_allocation)
-total_row = pd.DataFrame({
-    "Channel": ["Total"],
-    "Monthly Investment ($)": [f"${sum(float(row['Monthly Investment ($)'].replace('$','').replace(',','')) for _, row in flighting_df.iterrows()):,.0f}"],
-    "Total Investment ($)": [f"${total_flight:,.0f}"]
-})
-flighting_df = pd.concat([flighting_df, total_row], ignore_index=True)
 st.subheader("Flighting Investment Table")
 st.table(flighting_df)
 
@@ -336,16 +387,13 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
         with open("reference.txt", "r", encoding="utf-8") as f:
             reference_content = f.read()
     
-    # Instruct the AI to include a TLDR, then expanded analysis with creative themes,
-    # key audiences for prospecting (3) and conversion (3), a suggested flighting section,
-    # and 5 specific credible marketing article links.
     full_context = (
         f"You are a professional paid media and marketing consultant with deep expertise in the {vertical} vertical and a strong alignment with Junction 37's approach. "
-        f"Generate a final plan summary that includes two parts: first, a 'TLDR:' section with a one-sentence summary; then an expanded analysis (2-3 paragraphs) that includes the following sections:\n"
-        f"1. Creative Themes (3-5 themes that align with the target audiences).\n"
-        f"2. Key Audiences: List 3 key prospecting audiences and 3 key conversion audiences with reasoning and relevant article links.\n"
-        f"3. Suggested Flighting: Provide a recommendation for how the investment should be distributed over the campaign duration.\n"
-        f"At the end, include 5 specific, real, credible marketing article links (for example, from https://www.adage.com, https://www.marketingland.com, https://www.adweek.com, https://www.hubspot.com/marketing, https://www.marketingdive.com).\n\n"
+        f"Generate a final plan summary that includes two parts: first, a 'TLDR:' section with a one-sentence summary; then an expanded analysis (2-3 paragraphs) that includes:\n"
+        f"1. Creative Themes (3-5 themes that align with the target audiences),\n"
+        f"2. Key Audiences: list 3 key prospecting audiences and 3 key conversion audiences with reasoning and credible article links,\n"
+        f"3. Suggested Flighting: provide recommendations on how the investment should be distributed over the campaign duration,\n"
+        f"and finally, include 5 specific, real, credible marketing article links (from sources such as Ad Age, Marketing Land, Adweek, HubSpot Marketing, and Marketing Dive).\n\n"
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
         f"Additional Business Info: {additional_business_info}\n"
@@ -361,13 +409,13 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
         f"Top Priority Objective: {top_priority}\n"
         f"Brand Lifecycle Stage: {brand_lifecycle}\n\n"
         f"Base strategy summary: {base_summary}\n\n"
-        f"Generate a final plan summary as specified."
+        f"Generate a final plan summary with a TLDR section (one sentence) and an expanded analysis (2-3 paragraphs) that includes all the sections described above."
     )
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a professional paid media and marketing consultant with deep expertise in the client's vertical and Junction 37's approach."},
+                {"role": "system", "content": "You are a professional paid media and marketing consultant with deep expertise in the client's vertical and a deep understanding of Junction 37's approach."},
                 {"role": "user", "content": full_context}
             ],
             max_tokens=1000,
@@ -400,7 +448,6 @@ st.markdown(st.session_state.final_plan)
 def generate_pdf(report_text):
     pdf = FPDF()
     pdf.add_page()
-    # Header with title and date
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "Cortex Plan Report", ln=True, align="C")
     pdf.set_font("Arial", "", 12)
