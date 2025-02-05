@@ -8,11 +8,11 @@ import openai
 import os
 import datetime
 
-# Load the API key from Streamlit Cloud secrets.
+# Load API key from Streamlit secrets (do not display)
 openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
 # -------------------------------
-# CUSTOM CSS FOR A POLISHED LOOK & POINTER CURSOR ON DROPDOWNS
+# CUSTOM CSS FOR VISUAL APPEAL & POINTER CURSOR ON DROPDOWNS
 # -------------------------------
 st.markdown(
     """
@@ -38,7 +38,7 @@ st.markdown(
         padding: 0.5em 1em;
         border-radius: 5px;
     }
-    /* Change cursor on select boxes */
+    /* Pointer cursor for dropdowns */
     div[data-baseweb="select"] {
         cursor: pointer;
     }
@@ -48,7 +48,7 @@ st.markdown(
 )
 
 # -------------------------------
-# DATA STRUCTURES FOR OBJECTIVES
+# DATA STRUCTURES
 # -------------------------------
 objectives = {
     "Awareness": {
@@ -83,159 +83,67 @@ objectives = {
     }
 }
 
-# -------------------------------
-# VERTICAL CHANNEL MIX RECOMMENDATIONS (Radar Chart Data)
-# -------------------------------
+# Vertical channel mix data (each channel's default allocation percentages)
 vertical_channel_mix = {
     "Other": {
-        "Retail Media": 20,
-        "Paid Search": 20,
-        "Paid Social": 20,
-        "Linear TV": 20,
-        "Programmatic Display": 20,
-        "Connected TV": 15,
-        "Livewire Gaming": 5,
-        "Online Video": 20,
-        "Affiliate": 10,
-        "Influencer": 10,
-        "Email": 15,
-        "OOH/DOOH": 15,
-        "Audio": 10
+        "Retail Media": 20, "Paid Search": 20, "Paid Social": 20, "Linear TV": 20,
+        "Programmatic Display": 20, "Connected TV": 15, "Livewire Gaming": 5,
+        "Online Video": 20, "Affiliate": 10, "Influencer": 10, "Email": 15,
+        "OOH/DOOH": 15, "Audio": 10
     },
     "Travel": {
-        "Retail Media": 15,
-        "Paid Search": 25,
-        "Paid Social": 25,
-        "Linear TV": 10,
-        "Programmatic Display": 20,
-        "Connected TV": 15,
-        "Livewire Gaming": 5,
-        "Online Video": 30,
-        "Affiliate": 15,
-        "Influencer": 20,
-        "Email": 15,
-        "OOH/DOOH": 10,
-        "Audio": 10
+        "Retail Media": 15, "Paid Search": 25, "Paid Social": 25, "Linear TV": 10,
+        "Programmatic Display": 20, "Connected TV": 15, "Livewire Gaming": 5,
+        "Online Video": 30, "Affiliate": 15, "Influencer": 20, "Email": 15,
+        "OOH/DOOH": 10, "Audio": 10
     },
     "CPG": {
-        "Retail Media": 30,
-        "Paid Search": 15,
-        "Paid Social": 10,
-        "Linear TV": 35,
-        "Programmatic Display": 25,
-        "Connected TV": 20,
-        "Livewire Gaming": 5,
-        "Online Video": 15,
-        "Affiliate": 10,
-        "Influencer": 10,
-        "Email": 10,
-        "OOH/DOOH": 25,
-        "Audio": 10
+        "Retail Media": 30, "Paid Search": 15, "Paid Social": 10, "Linear TV": 35,
+        "Programmatic Display": 25, "Connected TV": 20, "Livewire Gaming": 5,
+        "Online Video": 15, "Affiliate": 10, "Influencer": 10, "Email": 10,
+        "OOH/DOOH": 25, "Audio": 10
     },
     "Finance": {
-        "Retail Media": 10,
-        "Paid Search": 35,
-        "Paid Social": 20,
-        "Linear TV": 10,
-        "Programmatic Display": 20,
-        "Connected TV": 10,
-        "Livewire Gaming": 0,
-        "Online Video": 20,
-        "Affiliate": 10,
-        "Influencer": 15,
-        "Email": 20,
-        "OOH/DOOH": 5,
-        "Audio": 15
+        "Retail Media": 10, "Paid Search": 35, "Paid Social": 20, "Linear TV": 10,
+        "Programmatic Display": 20, "Connected TV": 10, "Livewire Gaming": 0,
+        "Online Video": 20, "Affiliate": 10, "Influencer": 15, "Email": 20,
+        "OOH/DOOH": 5, "Audio": 15
     },
     "Technology": {
-        "Retail Media": 15,
-        "Paid Search": 25,
-        "Paid Social": 30,
-        "Linear TV": 5,
-        "Programmatic Display": 25,
-        "Connected TV": 15,
-        "Livewire Gaming": 5,
-        "Online Video": 25,
-        "Affiliate": 15,
-        "Influencer": 20,
-        "Email": 15,
-        "OOH/DOOH": 5,
-        "Audio": 10
+        "Retail Media": 15, "Paid Search": 25, "Paid Social": 30, "Linear TV": 5,
+        "Programmatic Display": 25, "Connected TV": 15, "Livewire Gaming": 5,
+        "Online Video": 25, "Affiliate": 15, "Influencer": 20, "Email": 15,
+        "OOH/DOOH": 5, "Audio": 10
     },
     "Retail": {
-        "Retail Media": 35,
-        "Paid Search": 20,
-        "Paid Social": 15,
-        "Linear TV": 30,
-        "Programmatic Display": 25,
-        "Connected TV": 20,
-        "Livewire Gaming": 5,
-        "Online Video": 20,
-        "Affiliate": 15,
-        "Influencer": 15,
-        "Email": 10,
-        "OOH/DOOH": 30,
-        "Audio": 10
+        "Retail Media": 35, "Paid Search": 20, "Paid Social": 15, "Linear TV": 30,
+        "Programmatic Display": 25, "Connected TV": 20, "Livewire Gaming": 5,
+        "Online Video": 20, "Affiliate": 15, "Influencer": 15, "Email": 10,
+        "OOH/DOOH": 30, "Audio": 10
     },
     "Healthcare": {
-        "Retail Media": 10,
-        "Paid Search": 20,
-        "Paid Social": 20,
-        "Linear TV": 10,
-        "Programmatic Display": 20,
-        "Connected TV": 15,
-        "Livewire Gaming": 0,
-        "Online Video": 20,
-        "Affiliate": 10,
-        "Influencer": 10,
-        "Email": 20,
-        "OOH/DOOH": 10,
-        "Audio": 10
+        "Retail Media": 10, "Paid Search": 20, "Paid Social": 20, "Linear TV": 10,
+        "Programmatic Display": 20, "Connected TV": 15, "Livewire Gaming": 0,
+        "Online Video": 20, "Affiliate": 10, "Influencer": 10, "Email": 20,
+        "OOH/DOOH": 10, "Audio": 10
     },
     "Education": {
-        "Retail Media": 10,
-        "Paid Search": 15,
-        "Paid Social": 15,
-        "Linear TV": 5,
-        "Programmatic Display": 15,
-        "Connected TV": 10,
-        "Livewire Gaming": 0,
-        "Online Video": 20,
-        "Affiliate": 10,
-        "Influencer": 5,
-        "Email": 15,
-        "OOH/DOOH": 5,
-        "Audio": 5
+        "Retail Media": 10, "Paid Search": 15, "Paid Social": 15, "Linear TV": 5,
+        "Programmatic Display": 15, "Connected TV": 10, "Livewire Gaming": 0,
+        "Online Video": 20, "Affiliate": 10, "Influencer": 5, "Email": 15,
+        "OOH/DOOH": 5, "Audio": 5
     },
     "Hospitality": {
-        "Retail Media": 20,
-        "Paid Search": 15,
-        "Paid Social": 20,
-        "Linear TV": 15,
-        "Programmatic Display": 20,
-        "Connected TV": 20,
-        "Livewire Gaming": 5,
-        "Online Video": 25,
-        "Affiliate": 15,
-        "Influencer": 20,
-        "Email": 15,
-        "OOH/DOOH": 20,
-        "Audio": 10
+        "Retail Media": 20, "Paid Search": 15, "Paid Social": 20, "Linear TV": 15,
+        "Programmatic Display": 20, "Connected TV": 20, "Livewire Gaming": 5,
+        "Online Video": 25, "Affiliate": 15, "Influencer": 20, "Email": 15,
+        "OOH/DOOH": 20, "Audio": 10
     },
     "Automotive": {
-        "Retail Media": 25,
-        "Paid Search": 20,
-        "Paid Social": 15,
-        "Linear TV": 25,
-        "Programmatic Display": 20,
-        "Connected TV": 20,
-        "Livewire Gaming": 5,
-        "Online Video": 20,
-        "Affiliate": 15,
-        "Influencer": 10,
-        "Email": 10,
-        "OOH/DOOH": 25,
-        "Audio": 10
+        "Retail Media": 25, "Paid Search": 20, "Paid Social": 15, "Linear TV": 25,
+        "Programmatic Display": 20, "Connected TV": 20, "Livewire Gaming": 5,
+        "Online Video": 20, "Affiliate": 15, "Influencer": 10, "Email": 10,
+        "OOH/DOOH": 25, "Audio": 10
     }
 }
 
@@ -244,40 +152,41 @@ vertical_channel_mix = {
 # -------------------------------
 st.sidebar.header("Client Inputs")
 
-# Business info inputs
+# Business info
 brand_name = st.sidebar.text_input("Brand Name", "-")
 business_problem = st.sidebar.text_area("Business Problem", "-")
 additional_business_info = st.sidebar.text_area("Additional Business Info", "-")
 
-# Investment Range as two number inputs (low-end and high-end)
+# Investment Range: two number inputs (low-end and high-end) with proper currency formatting
 investment_low = st.sidebar.number_input("Investment Range - Low-end ($)", min_value=0, max_value=100000000, value=100000, step=1000, format="%d")
 investment_high = st.sidebar.number_input("Investment Range - High-end ($)", min_value=0, max_value=100000000, value=200000, step=1000, format="%d")
 
-# Campaign start and end dates
+# Campaign dates
 campaign_start = st.sidebar.date_input("Campaign Start Date", datetime.date.today())
 campaign_end = st.sidebar.date_input("Campaign End Date", datetime.date.today() + datetime.timedelta(days=30))
 
-# Client vertical (with "-" as default)
+# Client vertical with default "-"
 vertical = st.sidebar.selectbox("Client Vertical", ["-","Other", "Travel", "CPG", "Finance", "Technology", "Retail", "Healthcare", "Education", "Hospitality", "Automotive"], index=0)
 
-# Top Priority Objective (with "-" as default)
+# Top Priority Objective with default "-"
 top_priority = st.sidebar.selectbox("Top Priority Objective", ["-"] + list(objectives.keys()), index=0)
 
-# Brand Lifecycle Stage (with "-" as default)
+# Brand Lifecycle Stage with default "-"
 brand_lifecycle = st.sidebar.selectbox("Brand Lifecycle Stage", ["-", "New", "Growing", "Mature", "Declining"], index=0)
 
-# Marketing Priorities (multiselect without default placeholder)
+# Marketing Priorities (no default)
 marketing_priorities = st.sidebar.multiselect("Marketing Priorities", 
     ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"], default=[])
 
-# Creative Formats Available (multiselect without default placeholder)
+# Creative Formats Available (no default)
 creative_formats = st.sidebar.multiselect("Creative Formats Available", 
     ["OLV", "Static Images", "TV", "Interactive", "Audio"], default=[])
 
 # -------------------------------
-# INTERACTIVE RADAR CHART ALLOCATION (Based on Creative Availability)
+# MANUAL ALLOCATION ADJUSTMENTS (Right-side)
 # -------------------------------
-# Define mapping from channel names to required creative formats.
+st.sidebar.subheader("Manual Allocation Adjustments")
+# Filter allocation based on creative formats
 creative_mapping = {
     "Retail Media": ["Static Images"],
     "Paid Search": ["Static Images", "OLV", "TV", "Interactive", "Audio"],
@@ -294,7 +203,6 @@ creative_mapping = {
     "Audio": ["Audio"]
 }
 
-# Filter the original allocation based on creative formats.
 def filter_allocation(allocation, creative_formats):
     if creative_formats:
         return {ch: val for ch, val in allocation.items() if any(fmt in creative_formats for fmt in creative_mapping.get(ch, []))}
@@ -302,14 +210,21 @@ def filter_allocation(allocation, creative_formats):
         return allocation
 
 filtered_allocation = filter_allocation(vertical_channel_mix.get(vertical, {}), creative_formats)
-# For now, updated_allocation is the same as filtered_allocation.
-updated_allocation = filtered_allocation.copy()
+# We'll allow manual editing of the allocations on the right.
+updated_allocation = {}
+for ch, val in filtered_allocation.items():
+    updated_allocation[ch] = st.sidebar.number_input(f"Allocation for {ch} (%)", min_value=0, max_value=100, value=val, step=1, format="%d")
+
+# Check if total allocation equals 100%
+total_alloc = sum(updated_allocation.values())
+if total_alloc != 100:
+    st.sidebar.warning(f"Total allocation is {total_alloc}%. It should sum to 100%.")
 
 # -------------------------------
-# HEADER & INSTRUCTIONS
+# HEADER & SUMMARY OF INPUTS
 # -------------------------------
 st.markdown('<h1 class="main-title">Cortex: Professional Paid Media Strategy Tool</h1>', unsafe_allow_html=True)
-st.write("Use the sidebar to input your business criteria and adjust channel allocations directly by dragging points on the radar chart. (Ensure that the allocations add up to 100%.) When ready, click **Run Plan** to generate your tailored strategy. Once satisfied, click **Download Report** for a detailed PDF.")
+st.write("Use the sidebar to input your business criteria. Adjust channel allocations manually (they should sum to 100%). When ready, click **Run Plan** to generate your tailored strategy. Then, download a detailed PDF report.")
 
 st.subheader("Your Inputs")
 st.write(f"**Brand Name:** {brand_name}")
@@ -325,186 +240,7 @@ st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketi
 st.write(f"**Creative Formats Available:** {', '.join(creative_formats) if creative_formats else 'None'}")
 
 # -------------------------------
-# INTERACTIVE MIND MAP SETUP
-# -------------------------------
-st.subheader("Interactive Paid Media Strategy Map")
-
-R_main = 3      
-R_sub = 1       
-R_detail = 0.7  
-center_x, center_y = 0, 0
-
-angles = {
-    "Awareness": 90,
-    "Growth": 18,
-    "Profitability": -54,
-    "Buy Rate": -126,
-    "Household Penetration": -198
-}
-
-node_x = []
-node_y = []
-node_text = []
-node_hover = []
-node_color = []
-node_size = []
-
-# Central node
-node_x.append(center_x)
-node_y.append(center_y)
-node_text.append("Paid Media Strategy")
-node_hover.append("Central Strategy Node")
-node_color.append("black")
-node_size.append(25)
-
-# Main nodes for each objective (only if top_priority is selected)
-main_positions = {}
-main_angles = {}
-if top_priority != "-":
-    for obj, angle_deg in angles.items():
-        angle_rad = math.radians(angle_deg)
-        x = center_x + R_main * math.cos(angle_rad)
-        y = center_y + R_main * math.sin(angle_rad)
-        main_positions[obj] = (x, y)
-        main_angles[obj] = angle_deg
-        node_x.append(x)
-        node_y.append(y)
-        node_text.append(obj)
-        hover_info = f"{obj}: {objectives[obj]['Strategic Imperatives']}"
-        node_hover.append(hover_info)
-        if obj == top_priority:
-            node_color.append("#EC155A")  # J37 primary color
-            node_size.append(20)
-        else:
-            node_color.append("#002561")  # J37 secondary color
-            node_size.append(15)
-else:
-    st.info("Please select a Top Priority Objective.")
-
-# Sub-nodes for the top priority objective
-sub_nodes = []
-if top_priority != "-" and top_priority in main_positions:
-    sub_node_labels = ["Strategic Imperatives", "KPIs", "Core Audiences", "Messaging Approach"]
-    sub_offsets = [45, -45, 135, -135]
-    main_angle = main_angles[top_priority]
-    main_x, main_y = main_positions[top_priority]
-    for j, sub_label in enumerate(sub_node_labels):
-        sub_angle = main_angle + sub_offsets[j]
-        sub_angle_rad = math.radians(sub_angle)
-        sx = main_x + R_sub * math.cos(sub_angle_rad)
-        sy = main_y + R_sub * math.sin(sub_angle_rad)
-        detail_text = objectives[top_priority][sub_label]
-        sub_hover = f"{sub_label} for {top_priority}: {detail_text}"
-        sub_nodes.append((sx, sy, sub_label, sub_hover, sub_angle))
-        node_x.append(sx)
-        node_y.append(sy)
-        node_text.append(sub_label)
-        node_hover.append(sub_hover)
-        node_color.append("#EC155A")
-        node_size.append(12)
-
-# Detail nodes branching off each sub-node
-for sub in sub_nodes:
-    sx, sy, sub_label, sub_hover, base_angle = sub
-    detail_str = objectives[top_priority][sub_label]
-    if sub_label in ["KPIs", "Core Audiences"]:
-        details = [d.strip() for d in detail_str.split(",")]
-    else:
-        details = [detail_str]
-    n_details = len(details)
-    for idx, detail in enumerate(details):
-        delta = (idx - (n_details - 1) / 2) * 15 if n_details > 1 else 0
-        detail_angle = base_angle + delta
-        detail_angle_rad = math.radians(detail_angle)
-        dx = sx + R_detail * math.cos(detail_angle_rad)
-        dy = sy + R_detail * math.sin(detail_angle_rad)
-        detail_label = detail
-        detail_hover = f"{sub_label} Detail: {detail}"
-        node_x.append(dx)
-        node_y.append(dy)
-        node_text.append(detail_label)
-        node_hover.append(detail_hover)
-        node_color.append("purple")
-        node_size.append(8)
-
-fig = go.Figure()
-
-fig.add_trace(go.Scatter(
-    x=node_x,
-    y=node_y,
-    mode='markers+text',
-    text=node_text,
-    textposition="top center",
-    marker=dict(color=node_color, size=node_size),
-    hovertext=node_hover,
-    hoverinfo="text"
-))
-
-# Connect central node to main nodes
-for obj, pos in main_positions.items():
-    fig.add_shape(
-        type="line",
-        x0=center_x, y0=center_y,
-        x1=pos[0], y1=pos[1],
-        line=dict(color="lightgrey", width=2)
-    )
-
-# Connect top priority main node to its sub-nodes
-if top_priority != "-" and top_priority in main_positions:
-    main_pos = main_positions[top_priority]
-    for sub in sub_nodes:
-        sx, sy, _, _, _ = sub
-        fig.add_shape(
-            type="line",
-            x0=main_pos[0], y0=main_pos[1],
-            x1=sx, y1=sy,
-            line=dict(color="lightgrey", width=1.5)
-        )
-
-# Connect sub-nodes to detail nodes
-for sub in sub_nodes:
-    sx, sy, sub_label, _, base_angle = sub
-    detail_str = objectives[top_priority][sub_label]
-    if sub_label in ["KPIs", "Core Audiences"]:
-        details = [d.strip() for d in detail_str.split(",")]
-    else:
-        details = [detail_str]
-    n_details = len(details)
-    for idx in range(n_details):
-        delta = (idx - (n_details - 1) / 2) * 15 if n_details > 1 else 0
-        detail_angle = base_angle + delta
-        detail_angle_rad = math.radians(detail_angle)
-        dx = sx + R_detail * math.cos(detail_angle_rad)
-        dy = sy + R_detail * math.sin(detail_angle_rad)
-        fig.add_shape(
-            type="line",
-            x0=sx, y0=sy,
-            x1=dx, y1=dy,
-            line=dict(color="lightgrey", width=1)
-        )
-
-# Zoom in on the top priority cluster if selected.
-if top_priority != "-" and top_priority in main_positions:
-    center_focus = main_positions[top_priority]
-    fig.update_layout(
-        xaxis=dict(range=[center_focus[0] - 4, center_focus[0] + 4]),
-        yaxis=dict(range=[center_focus[1] - 4, center_focus[1] + 4])
-    )
-
-fig.update_layout(
-    dragmode="pan",
-    hovermode="closest",
-    margin=dict(l=40, r=40, t=40, b=40),
-    plot_bgcolor="white",
-    paper_bgcolor="white",
-    font=dict(color="#333333", size=12),
-    height=600
-)
-
-st.plotly_chart(fig, use_container_width=True)
-
-# -------------------------------
-# RADAR CHART FOR VERTICAL CHANNEL MIX (Original vs. Updated)
+# INTERACTIVE RADAR CHART (Original vs. Updated)
 # -------------------------------
 st.subheader("Channel Allocation Comparison")
 
@@ -514,62 +250,98 @@ updated_values = [updated_allocation.get(ch, 0) for ch in channels_list]
 
 radar_fig = go.Figure()
 
+# Original Allocation trace
 radar_fig.add_trace(go.Scatterpolar(
     r=original_values,
     theta=channels_list,
     fill='toself',
-    fillcolor="rgba(0,37,97,0.3)",  # J37 secondary color
+    fillcolor="rgba(0,37,97,0.3)",  # Secondary color at 30% opacity
     line_color="#002561",
     name='Original Allocation'
 ))
 
+# Updated Allocation trace
 radar_fig.add_trace(go.Scatterpolar(
     r=updated_values,
     theta=channels_list,
     fill='toself',
-    fillcolor="rgba(236,21,90,0.3)",  # J37 primary color
+    fillcolor="rgba(236,21,90,0.3)",  # Primary color at 30% opacity
     line_color="#EC155A",
     name='Updated Allocation'
 ))
 
+# Adjust the radial axis for a tighter view.
 radar_fig.update_layout(
     polar=dict(
         radialaxis=dict(
             visible=True,
-            range=[0, 100]
+            range=[0, max(100, max(original_values + updated_values))]
         )
     ),
     showlegend=True,
-    title=f"Channel Mix for {vertical} Brands (Based on Client Inputs)"
+    title=f"Channel Mix for {vertical} Brands"
 )
 
-# Enable interactive editing for the radar chart (allowing point dragging if supported)
 st.plotly_chart(radar_fig, use_container_width=True, config={"editable": True})
 
-st.subheader("Allocation Comparison")
+# Display allocation comparison as a table.
 allocation_df = pd.DataFrame({
     "Channel": channels_list,
-    "Original Allocation": original_values,
-    "Updated Allocation": updated_values
+    "Original Allocation (%)": original_values,
+    "Updated Allocation (%)": updated_values
 })
+st.subheader("Allocation Table")
 st.table(allocation_df)
+
+# -------------------------------
+# INVESTMENT BY CHANNEL CALCULATION
+# -------------------------------
+# Compute the mid-range of investment.
+mid_investment = (investment_low + investment_high) / 2
+investment_by_channel = {ch: mid_investment * (updated_allocation[ch] / 100) for ch in updated_allocation}
+inv_df = pd.DataFrame({
+    "Channel": list(investment_by_channel.keys()),
+    "Investment ($)": [f"${investment_by_channel[ch]:,.0f}" for ch in investment_by_channel]
+})
+st.subheader("Investment Allocation by Channel (Mid-Range)")
+st.table(inv_df)
+
+# -------------------------------
+# SIMPLE CHART OF TOP PRIORITY OBJECTIVE DETAILS (instead of crowded mind map)
+# -------------------------------
+if top_priority != "-":
+    st.subheader("Objective Details")
+    details_data = {
+        "Attribute": ["Strategic Imperatives", "KPIs", "Core Audiences", "Messaging Approach"],
+        "Description": [
+            objectives[top_priority]["Strategic Imperatives"],
+            objectives[top_priority]["KPIs"],
+            objectives[top_priority]["Core Audiences"],
+            objectives[top_priority]["Messaging Approach"]
+        ]
+    }
+    details_df = pd.DataFrame(details_data)
+    st.table(details_df)
+else:
+    st.info("Please select a Top Priority Objective to view its details.")
 
 # -------------------------------
 # FINAL AI GENERATED PLAN SUMMARY (Unified)
 # -------------------------------
 st.subheader("Final Plan Summary")
 
-def generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats, investment_low, investment_high, campaign_start, campaign_end, updated_allocations, base_summary):
-    # Read reference content if available
+def generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats,
+                       investment_low, investment_high, campaign_start, campaign_end, updated_allocations, base_summary):
+    # Read reference content if available.
     reference_content = ""
     if os.path.exists("reference.txt"):
         with open("reference.txt", "r", encoding="utf-8") as f:
             reference_content = f.read()
     
     full_context = (
-        f"You are a professional paid media and marketing consultant with deep expertise in the {vertical} vertical and Junction 37's approach. "
-        f"Generate a final plan summary that includes two parts: first, a 'TLDR:' section with a one-sentence summary; then an expanded section (2-3 paragraphs) "
-        f"with actionable insights, creative recommendations, and 5 specific, relevant article/resource links. Tailor your output to the client's inputs below.\n\n"
+        f"You are a professional paid media and marketing consultant with deep expertise in the {vertical} vertical and "
+        f"Junction 37's strategic approach. Generate a final plan summary that includes two parts: first, a 'TLDR:' section with a one-sentence summary; then an expanded section (2-3 paragraphs) "
+        f"with actionable insights, creative recommendations, and 5 specific relevant article/resource links. Tailor your output to the client's inputs below.\n\n"
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
         f"Additional Business Info: {additional_business_info}\n"
@@ -585,13 +357,13 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
         f"Top Priority Objective: {top_priority}\n"
         f"Brand Lifecycle Stage: {brand_lifecycle}\n\n"
         f"Base strategy summary: {base_summary}\n\n"
-        f"Generate a final plan summary with a TLDR section (one sentence) and an expanded analysis (2-3 paragraphs) that includes 5 relevant resource links."
+        f"Generate a final plan summary as specified."
     )
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a professional paid media and marketing consultant with expertise in the client's vertical and Junction 37's approach."},
+                {"role": "system", "content": "You are a professional paid media and marketing consultant with expertise in the client's vertical and a deep understanding of Junction 37's approach."},
                 {"role": "user", "content": full_context}
             ],
             max_tokens=400,
@@ -624,19 +396,21 @@ st.markdown(st.session_state.final_plan)
 def generate_pdf(report_text):
     pdf = FPDF()
     pdf.add_page()
-    # Add header with title and date
+    # Header
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "Cortex Plan Report", ln=True, align="C")
     pdf.set_font("Arial", "", 12)
     pdf.cell(0, 10, f"Report Date: {datetime.datetime.now().strftime('%Y-%m-%d')}", ln=True, align="C")
     pdf.ln(10)
     
-    # Process each line; if line starts with a header label, set it bold.
-    header_labels = ["Brand Name:", "Business Problem:", "Additional Business Info:", "Investment Range:", 
-                       "Campaign Start Date:", "Campaign End Date:", "Top Priority Objective:", 
-                       "Brand Lifecycle Stage:", "Client Vertical:", "Marketing Priorities:", 
-                       "Creative Formats Available:", "Strategic Details:", "Recommended Channel Mix", 
-                       "Updated Channel Allocations:", "Final Plan Summary:", "Case Study:"]
+    # Bold section headers for known labels.
+    header_labels = [
+        "Brand Name:", "Business Problem:", "Additional Business Info:", "Investment Range:", 
+        "Campaign Start Date:", "Campaign End Date:", "Top Priority Objective:", 
+        "Brand Lifecycle Stage:", "Client Vertical:", "Marketing Priorities:", 
+        "Creative Formats Available:", "Strategic Details:", "Recommended Channel Mix", 
+        "Updated Channel Allocations:", "Final Plan Summary:", "Case Study:"
+    ]
     
     for line in report_text.split('\n'):
         if any(line.startswith(header) for header in header_labels):
