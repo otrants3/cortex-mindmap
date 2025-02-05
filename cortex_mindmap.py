@@ -237,30 +237,42 @@ else:
 
 # -------------------------------
 # TWO PIE CHARTS FOR CHANNEL ALLOCATION
-# -------------------------------
 st.subheader("Channel Allocation Comparison")
 
+# Define a base palette of colors
+base_colors = [
+    '#636EFA', '#EF553B', '#00CC96', '#AB63FA',
+    '#FFA15A', '#19D3F3', '#FF6692', '#B6E880',
+    '#FF97FF', '#FECB52', '#1f77b4', '#ff7f0e'
+]
+
 # Original Allocation Pie Chart
+channels_original = list(normalized_allocation.keys())
+colors_original = [base_colors[i % len(base_colors)] for i in range(len(channels_original))]
 pie_original = go.Figure(data=[go.Pie(
-    labels=list(normalized_allocation.keys()),
+    labels=channels_original,
     values=list(normalized_allocation.values()),
-    marker=dict(colors=["#002561" for _ in normalized_allocation])
+    marker=dict(colors=colors_original)
 )])
 pie_original.update_layout(title="Original Allocation (Normalized)")
 
 # Updated Allocation Pie Chart (if provided)
 if updated_allocation:
+    channels_updated = list(updated_allocation.keys())
+    colors_updated = [base_colors[i % len(base_colors)] for i in range(len(channels_updated))]
     pie_updated = go.Figure(data=[go.Pie(
-        labels=list(updated_allocation.keys()),
+        labels=channels_updated,
         values=list(updated_allocation.values()),
-        marker=dict(colors=["#EC155A" for _ in updated_allocation])
+        marker=dict(colors=colors_updated)
     )])
     pie_updated.update_layout(title="Updated Allocation (Manual)")
 else:
+    channels_updated = list(normalized_allocation.keys())
+    colors_updated = [base_colors[i % len(base_colors)] for i in range(len(channels_updated))]
     pie_updated = go.Figure(data=[go.Pie(
-        labels=list(normalized_allocation.keys()),
+        labels=channels_updated,
         values=list(normalized_allocation.values()),
-        marker=dict(colors=["#EC155A" for _ in normalized_allocation])
+        marker=dict(colors=colors_updated)
     )])
     pie_updated.update_layout(title="Updated Allocation (Same as Original)")
 
