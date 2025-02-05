@@ -8,7 +8,7 @@ import openai
 import os
 import datetime
 
-# Load the API key from Streamlit Cloud secrets.
+# Load API key from Streamlit Cloud secrets.
 openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
 # -------------------------------
@@ -50,7 +50,6 @@ st.markdown(
 # -------------------------------
 # DATA STRUCTURES
 # -------------------------------
-# Objectives for top priority
 objectives = {
     "Awareness": {
         "Strategic Imperatives": "Prioritize reach and frequency",
@@ -84,7 +83,6 @@ objectives = {
     }
 }
 
-# Default vertical channel mix (raw values)
 vertical_channel_mix = {
     "Other": {"Retail Media": 20, "Paid Search": 20, "Paid Social": 20, "Linear TV": 20,
               "Programmatic Display": 20, "Connected TV": 15, "Livewire Gaming": 5,
@@ -128,7 +126,9 @@ vertical_channel_mix = {
                    "OOH/DOOH": 25, "Audio": 10}
 }
 
-# (Optional) Objective-based adjustment multipliers.
+# -------------------------------
+# OBJECTIVE-BASED ADJUSTMENT MULTIPLIERS & NORMALIZATION FUNCTION
+# -------------------------------
 objective_adjustments = {
     "Awareness": {"Paid Social": 1.2, "Online Video": 1.1, "Retail Media": 1.1},
     "Growth": {"Paid Search": 1.2, "Programmatic Display": 1.1, "Online Video": 1.1},
@@ -137,10 +137,8 @@ objective_adjustments = {
     "Household Penetration": {"OOH/DOOH": 1.2, "Retail Media": 1.1}
 }
 
-# Compute normalized default allocation (based on vertical and objective adjustments)
 def compute_normalized_allocation(vertical, top_priority):
     raw = vertical_channel_mix.get(vertical, {})
-    # If a valid top_priority is selected and exists in objective_adjustments, adjust.
     if top_priority != "-" and top_priority in objective_adjustments:
         adjustments = objective_adjustments[top_priority]
         adjusted = {ch: raw[ch] * adjustments.get(ch, 1) for ch in raw}
@@ -153,22 +151,69 @@ def compute_normalized_allocation(vertical, top_priority):
         normalized = adjusted
     return normalized
 
+# -------------------------------
+# SIDEBAR: CLIENT INPUTS
+# -------------------------------
+st.sidebar.header("Client Inputs")
+
+# Business info
+brand_name = st.sidebar.text_input("Brand Name", "-")
+business_problem = st.sidebar.text_area("Business Problem", "-")
+additional_business_info = st.sidebar.text_area("Additional Business Info", "-")
+
+# Investment Range as two number inputs with currency formatting
+investment_low = st.sidebar.number_input("Investment Range - Low-end ($)", min_value=0, max_value=100000000, value=100000, step=1000, format="%d")
+investment_high = st.sidebar.number_input("Investment Range - High-end ($)", min_value=0, max_value=100000000, value=200000, step=1000, format="%d")
+
+# Campaign dates
+campaign_start = st.sidebar.date_input("Campaign Start Date", datetime.date.today())
+campaign_end = st.sidebar.date_input("Campaign End Date", datetime.date.today() + datetime.timedelta(days=30))
+
+# Client Vertical with "-" as default
+vertical = st.sidebar.selectbox("Client Vertical", ["-","Other", "Travel", "CPG", "Finance", "Technology", "Retail", "Healthcare", "Education", "Hospitality", "Automotive"], index=0)
+
+# Top Priority Objective with "-" as default
+top_priority = st.sidebar.selectbox("Top Priority Objective", ["-"] + list(objectives.keys()), index=0)
+
+# Brand Lifecycle Stage with "-" as default
+brand_lifecycle = st.sidebar.selectbox("Brand Lifecycle Stage", ["-", "New", "Growing", "Mature", "Declining"], index=0)
+
+# Marketing Priorities (multiselect without default)
+marketing_priorities = st.sidebar.multiselect("Marketing Priorities", 
+    ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"], default=[])
+
+# Creative Formats Available (multiselect without default)
+creative_formats = st.sidebar.multiselect("Creative Formats Available", 
+    ["OLV", "Static Images", "TV", "Interactive", "Audio"], default=[])
+
+# -------------------------------
+# NORMALIZE DEFAULT ALLOCATION
+# -------------------------------
 normalized_allocation = compute_normalized_allocation(vertical, top_priority)
 
-# Use normalized_allocation as the "original allocation" for investment calculations.
+# -------------------------------
+# INVESTMENT CALCULATIONS: ORIGINAL INVESTMENT BY CHANNEL
+# -------------------------------
 mid_investment = (investment_low + investment_high) / 2
 original_investment_by_channel = {ch: mid_investment * (normalized_allocation[ch] / 100) for ch in normalized_allocation}
 
-# The updated_allocation is provided via manual number inputs (if top_priority is selected).
+# -------------------------------
+# MANUAL ALLOCATION ADJUSTMENTS (Right-side)
+# -------------------------------
+st.sidebar.subheader("Manual Allocation Adjustments")
+updated_allocation = {}
 if top_priority != "-" and normalized_allocation:
-    updated_allocation = {}
-    st.sidebar.subheader("Manual Allocation Adjustments")
     for ch, default_val in normalized_allocation.items():
         updated_allocation[ch] = st.sidebar.number_input(f"Allocation for {ch} (%)", min_value=0, max_value=100, value=int(round(default_val)), step=1, format="%d")
 else:
     updated_allocation = {}
 
-# Compute updated investment by channel using the updated allocation.
+# Check if updated allocations sum to 100%
+total_alloc = sum(updated_allocation.values())
+if total_alloc != 100:
+    st.sidebar.warning(f"Total allocation is {total_alloc}%. It should sum to 100%.")
+
+# Compute updated investment by channel.
 if updated_allocation:
     updated_investment_by_channel = {ch: mid_investment * (updated_allocation[ch] / 100) for ch in updated_allocation}
 else:
@@ -178,7 +223,7 @@ else:
 # HEADER & SUMMARY OF INPUTS
 # -------------------------------
 st.markdown('<h1 class="main-title">Cortex: Professional Paid Media Strategy Tool</h1>', unsafe_allow_html=True)
-st.write("Use the sidebar to input your business criteria and adjust channel allocations by manually editing the numbers. (Ensure the allocations sum to 100%.) When ready, click **Run Plan** (in the sidebar) to generate your tailored strategy. Then, download a detailed PDF report.")
+st.write("Use the sidebar to input your business criteria. Adjust channel allocations manually (they must sum to 100%). When ready, click **Run Plan** (in the sidebar) to generate your tailored strategy. Then, download a detailed PDF report.")
 
 st.subheader("Your Inputs")
 st.write(f"**Brand Name:** {brand_name}")
@@ -194,7 +239,7 @@ st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketi
 st.write(f"**Creative Formats Available:** {', '.join(creative_formats) if creative_formats else 'None'}")
 
 # -------------------------------
-# DISPLAY OBJECTIVE DETAILS (Simpler than the previous mind map)
+# OBJECTIVE DETAILS (Simple Table)
 # -------------------------------
 if top_priority != "-":
     st.subheader("Objective Details")
@@ -215,7 +260,8 @@ else:
 # -------------------------------
 # INTERACTIVE RADAR CHART (Original vs. Updated Allocation)
 # -------------------------------
-st.subheader("Channel Allocation Comparison (Must Sum to 100%)")
+st.subheader("Channel Allocation Comparison")
+
 channels_list = list(normalized_allocation.keys())
 original_values = [normalized_allocation[ch] for ch in channels_list]
 updated_values = [updated_allocation.get(ch, 0) for ch in channels_list]
@@ -251,7 +297,6 @@ radar_fig.update_layout(
     title=f"Channel Mix for {vertical} Brands"
 )
 
-# Enable interactive editing (if supported) so that points can be dragged.
 st.plotly_chart(radar_fig, use_container_width=True, config={"editable": True})
 
 # Display investment by channel as a table.
@@ -282,18 +327,16 @@ st.subheader("Final Plan Summary")
 
 def generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats,
                        investment_low, investment_high, campaign_start, campaign_end, updated_allocations, base_summary):
-    # Include reference documents if available.
     reference_content = ""
     if os.path.exists("reference.txt"):
         with open("reference.txt", "r", encoding="utf-8") as f:
             reference_content = f.read()
     
     full_context = (
-        f"You are a professional paid media and marketing consultant with deep expertise in the {vertical} vertical and "
-        f"Junction 37's strategic approach. Generate a final plan summary that includes two parts: first, a 'TLDR:' section "
-        f"with a one-sentence summary; then an expanded analysis (2-3 paragraphs) that includes a Creative Themes section (3-5 themes), "
-        f"a Key Audiences section (3-5 audiences for prospecting and conversion), and a Suggested Flighting section (including data-driven insights). "
-        f"Include 5 specific, relevant resource links at the end of the analysis. Tailor your output to the client's inputs below.\n\n"
+        f"You are a professional paid media and marketing consultant with deep expertise in the {vertical} vertical and Junction 37's strategic approach. "
+        f"Generate a final plan summary that includes two parts: first, a 'TLDR:' section with a one-sentence summary; then an expanded analysis (2-3 paragraphs) "
+        f"that includes a Creative Themes section (3-5 themes), Key Audiences for both prospecting and conversion (3-5 each), and a Suggested Flighting section "
+        f"that leverages external data insights (e.g., Google Trends) and includes 5 specific, relevant resource links. Tailor your output to the client's inputs below.\n\n"
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
         f"Additional Business Info: {additional_business_info}\n"
