@@ -8,7 +8,7 @@ import openai
 import os
 import datetime
 
-# Load API key from Streamlit secrets (do not display)
+# Load the API key from Streamlit Cloud secrets.
 openai.api_key = st.secrets.get("OPENAI_API_KEY")
 
 # -------------------------------
@@ -38,7 +38,7 @@ st.markdown(
         padding: 0.5em 1em;
         border-radius: 5px;
     }
-    /* Pointer cursor for dropdowns */
+    /* Change cursor on select boxes */
     div[data-baseweb="select"] {
         cursor: pointer;
     }
@@ -50,6 +50,7 @@ st.markdown(
 # -------------------------------
 # DATA STRUCTURES
 # -------------------------------
+# Objectives for top priority
 objectives = {
     "Awareness": {
         "Strategic Imperatives": "Prioritize reach and frequency",
@@ -83,148 +84,101 @@ objectives = {
     }
 }
 
-# Vertical channel mix data (each channel's default allocation percentages)
+# Default vertical channel mix (raw values)
 vertical_channel_mix = {
-    "Other": {
-        "Retail Media": 20, "Paid Search": 20, "Paid Social": 20, "Linear TV": 20,
-        "Programmatic Display": 20, "Connected TV": 15, "Livewire Gaming": 5,
-        "Online Video": 20, "Affiliate": 10, "Influencer": 10, "Email": 15,
-        "OOH/DOOH": 15, "Audio": 10
-    },
-    "Travel": {
-        "Retail Media": 15, "Paid Search": 25, "Paid Social": 25, "Linear TV": 10,
-        "Programmatic Display": 20, "Connected TV": 15, "Livewire Gaming": 5,
-        "Online Video": 30, "Affiliate": 15, "Influencer": 20, "Email": 15,
-        "OOH/DOOH": 10, "Audio": 10
-    },
-    "CPG": {
-        "Retail Media": 30, "Paid Search": 15, "Paid Social": 10, "Linear TV": 35,
-        "Programmatic Display": 25, "Connected TV": 20, "Livewire Gaming": 5,
-        "Online Video": 15, "Affiliate": 10, "Influencer": 10, "Email": 10,
-        "OOH/DOOH": 25, "Audio": 10
-    },
-    "Finance": {
-        "Retail Media": 10, "Paid Search": 35, "Paid Social": 20, "Linear TV": 10,
-        "Programmatic Display": 20, "Connected TV": 10, "Livewire Gaming": 0,
-        "Online Video": 20, "Affiliate": 10, "Influencer": 15, "Email": 20,
-        "OOH/DOOH": 5, "Audio": 15
-    },
-    "Technology": {
-        "Retail Media": 15, "Paid Search": 25, "Paid Social": 30, "Linear TV": 5,
-        "Programmatic Display": 25, "Connected TV": 15, "Livewire Gaming": 5,
-        "Online Video": 25, "Affiliate": 15, "Influencer": 20, "Email": 15,
-        "OOH/DOOH": 5, "Audio": 10
-    },
-    "Retail": {
-        "Retail Media": 35, "Paid Search": 20, "Paid Social": 15, "Linear TV": 30,
-        "Programmatic Display": 25, "Connected TV": 20, "Livewire Gaming": 5,
-        "Online Video": 20, "Affiliate": 15, "Influencer": 15, "Email": 10,
-        "OOH/DOOH": 30, "Audio": 10
-    },
-    "Healthcare": {
-        "Retail Media": 10, "Paid Search": 20, "Paid Social": 20, "Linear TV": 10,
-        "Programmatic Display": 20, "Connected TV": 15, "Livewire Gaming": 0,
-        "Online Video": 20, "Affiliate": 10, "Influencer": 10, "Email": 20,
-        "OOH/DOOH": 10, "Audio": 10
-    },
-    "Education": {
-        "Retail Media": 10, "Paid Search": 15, "Paid Social": 15, "Linear TV": 5,
-        "Programmatic Display": 15, "Connected TV": 10, "Livewire Gaming": 0,
-        "Online Video": 20, "Affiliate": 10, "Influencer": 5, "Email": 15,
-        "OOH/DOOH": 5, "Audio": 5
-    },
-    "Hospitality": {
-        "Retail Media": 20, "Paid Search": 15, "Paid Social": 20, "Linear TV": 15,
-        "Programmatic Display": 20, "Connected TV": 20, "Livewire Gaming": 5,
-        "Online Video": 25, "Affiliate": 15, "Influencer": 20, "Email": 15,
-        "OOH/DOOH": 20, "Audio": 10
-    },
-    "Automotive": {
-        "Retail Media": 25, "Paid Search": 20, "Paid Social": 15, "Linear TV": 25,
-        "Programmatic Display": 20, "Connected TV": 20, "Livewire Gaming": 5,
-        "Online Video": 20, "Affiliate": 15, "Influencer": 10, "Email": 10,
-        "OOH/DOOH": 25, "Audio": 10
-    }
+    "Other": {"Retail Media": 20, "Paid Search": 20, "Paid Social": 20, "Linear TV": 20,
+              "Programmatic Display": 20, "Connected TV": 15, "Livewire Gaming": 5,
+              "Online Video": 20, "Affiliate": 10, "Influencer": 10, "Email": 15,
+              "OOH/DOOH": 15, "Audio": 10},
+    "Travel": {"Retail Media": 15, "Paid Search": 25, "Paid Social": 25, "Linear TV": 10,
+               "Programmatic Display": 20, "Connected TV": 15, "Livewire Gaming": 5,
+               "Online Video": 30, "Affiliate": 15, "Influencer": 20, "Email": 15,
+               "OOH/DOOH": 10, "Audio": 10},
+    "CPG": {"Retail Media": 30, "Paid Search": 15, "Paid Social": 10, "Linear TV": 35,
+            "Programmatic Display": 25, "Connected TV": 20, "Livewire Gaming": 5,
+            "Online Video": 15, "Affiliate": 10, "Influencer": 10, "Email": 10,
+            "OOH/DOOH": 25, "Audio": 10},
+    "Finance": {"Retail Media": 10, "Paid Search": 35, "Paid Social": 20, "Linear TV": 10,
+                "Programmatic Display": 20, "Connected TV": 10, "Livewire Gaming": 0,
+                "Online Video": 20, "Affiliate": 10, "Influencer": 15, "Email": 20,
+                "OOH/DOOH": 5, "Audio": 15},
+    "Technology": {"Retail Media": 15, "Paid Search": 25, "Paid Social": 30, "Linear TV": 5,
+                   "Programmatic Display": 25, "Connected TV": 15, "Livewire Gaming": 5,
+                   "Online Video": 25, "Affiliate": 15, "Influencer": 20, "Email": 15,
+                   "OOH/DOOH": 5, "Audio": 10},
+    "Retail": {"Retail Media": 35, "Paid Search": 20, "Paid Social": 15, "Linear TV": 30,
+               "Programmatic Display": 25, "Connected TV": 20, "Livewire Gaming": 5,
+               "Online Video": 20, "Affiliate": 15, "Influencer": 15, "Email": 10,
+               "OOH/DOOH": 30, "Audio": 10},
+    "Healthcare": {"Retail Media": 10, "Paid Search": 20, "Paid Social": 20, "Linear TV": 10,
+                   "Programmatic Display": 20, "Connected TV": 15, "Livewire Gaming": 0,
+                   "Online Video": 20, "Affiliate": 10, "Influencer": 10, "Email": 20,
+                   "OOH/DOOH": 10, "Audio": 10},
+    "Education": {"Retail Media": 10, "Paid Search": 15, "Paid Social": 15, "Linear TV": 5,
+                  "Programmatic Display": 15, "Connected TV": 10, "Livewire Gaming": 0,
+                  "Online Video": 20, "Affiliate": 10, "Influencer": 5, "Email": 15,
+                  "OOH/DOOH": 5, "Audio": 5},
+    "Hospitality": {"Retail Media": 20, "Paid Search": 15, "Paid Social": 20, "Linear TV": 15,
+                    "Programmatic Display": 20, "Connected TV": 20, "Livewire Gaming": 5,
+                    "Online Video": 25, "Affiliate": 15, "Influencer": 20, "Email": 15,
+                    "OOH/DOOH": 20, "Audio": 10},
+    "Automotive": {"Retail Media": 25, "Paid Search": 20, "Paid Social": 15, "Linear TV": 25,
+                   "Programmatic Display": 20, "Connected TV": 20, "Livewire Gaming": 5,
+                   "Online Video": 20, "Affiliate": 15, "Influencer": 10, "Email": 10,
+                   "OOH/DOOH": 25, "Audio": 10}
 }
 
-# -------------------------------
-# SIDEBAR: CLIENT INPUTS
-# -------------------------------
-st.sidebar.header("Client Inputs")
-
-# Business info
-brand_name = st.sidebar.text_input("Brand Name", "-")
-business_problem = st.sidebar.text_area("Business Problem", "-")
-additional_business_info = st.sidebar.text_area("Additional Business Info", "-")
-
-# Investment Range: two number inputs (low-end and high-end) with proper currency formatting
-investment_low = st.sidebar.number_input("Investment Range - Low-end ($)", min_value=0, max_value=100000000, value=100000, step=1000, format="%d")
-investment_high = st.sidebar.number_input("Investment Range - High-end ($)", min_value=0, max_value=100000000, value=200000, step=1000, format="%d")
-
-# Campaign dates
-campaign_start = st.sidebar.date_input("Campaign Start Date", datetime.date.today())
-campaign_end = st.sidebar.date_input("Campaign End Date", datetime.date.today() + datetime.timedelta(days=30))
-
-# Client vertical with default "-"
-vertical = st.sidebar.selectbox("Client Vertical", ["-","Other", "Travel", "CPG", "Finance", "Technology", "Retail", "Healthcare", "Education", "Hospitality", "Automotive"], index=0)
-
-# Top Priority Objective with default "-"
-top_priority = st.sidebar.selectbox("Top Priority Objective", ["-"] + list(objectives.keys()), index=0)
-
-# Brand Lifecycle Stage with default "-"
-brand_lifecycle = st.sidebar.selectbox("Brand Lifecycle Stage", ["-", "New", "Growing", "Mature", "Declining"], index=0)
-
-# Marketing Priorities (no default)
-marketing_priorities = st.sidebar.multiselect("Marketing Priorities", 
-    ["Increase conversions", "Boost retention", "Improve brand awareness", "Increase sales volume"], default=[])
-
-# Creative Formats Available (no default)
-creative_formats = st.sidebar.multiselect("Creative Formats Available", 
-    ["OLV", "Static Images", "TV", "Interactive", "Audio"], default=[])
-
-# -------------------------------
-# MANUAL ALLOCATION ADJUSTMENTS (Right-side)
-# -------------------------------
-st.sidebar.subheader("Manual Allocation Adjustments")
-# Filter allocation based on creative formats
-creative_mapping = {
-    "Retail Media": ["Static Images"],
-    "Paid Search": ["Static Images", "OLV", "TV", "Interactive", "Audio"],
-    "Paid Social": ["Interactive", "Static Images"],
-    "Linear TV": ["TV"],
-    "Programmatic Display": ["Static Images"],
-    "Connected TV": ["TV"],
-    "Livewire Gaming": ["Interactive"],
-    "Online Video": ["OLV"],
-    "Affiliate": ["Static Images"],
-    "Influencer": ["Static Images"],
-    "Email": ["Static Images"],
-    "OOH/DOOH": ["Static Images"],
-    "Audio": ["Audio"]
+# (Optional) Objective-based adjustment multipliers.
+objective_adjustments = {
+    "Awareness": {"Paid Social": 1.2, "Online Video": 1.1, "Retail Media": 1.1},
+    "Growth": {"Paid Search": 1.2, "Programmatic Display": 1.1, "Online Video": 1.1},
+    "Profitability": {"Email": 1.2, "Affiliate": 1.1, "Retail Media": 0.9},
+    "Buy Rate": {"Paid Social": 1.1, "Online Video": 1.1, "Retail Media": 1.0},
+    "Household Penetration": {"OOH/DOOH": 1.2, "Retail Media": 1.1}
 }
 
-def filter_allocation(allocation, creative_formats):
-    if creative_formats:
-        return {ch: val for ch, val in allocation.items() if any(fmt in creative_formats for fmt in creative_mapping.get(ch, []))}
+# Compute normalized default allocation (based on vertical and objective adjustments)
+def compute_normalized_allocation(vertical, top_priority):
+    raw = vertical_channel_mix.get(vertical, {})
+    # If a valid top_priority is selected and exists in objective_adjustments, adjust.
+    if top_priority != "-" and top_priority in objective_adjustments:
+        adjustments = objective_adjustments[top_priority]
+        adjusted = {ch: raw[ch] * adjustments.get(ch, 1) for ch in raw}
     else:
-        return allocation
+        adjusted = raw.copy()
+    total = sum(adjusted.values())
+    if total > 0:
+        normalized = {ch: (val / total) * 100 for ch, val in adjusted.items()}
+    else:
+        normalized = adjusted
+    return normalized
 
-filtered_allocation = filter_allocation(vertical_channel_mix.get(vertical, {}), creative_formats)
-# We'll allow manual editing of the allocations on the right.
-updated_allocation = {}
-for ch, val in filtered_allocation.items():
-    updated_allocation[ch] = st.sidebar.number_input(f"Allocation for {ch} (%)", min_value=0, max_value=100, value=val, step=1, format="%d")
+normalized_allocation = compute_normalized_allocation(vertical, top_priority)
 
-# Check if total allocation equals 100%
-total_alloc = sum(updated_allocation.values())
-if total_alloc != 100:
-    st.sidebar.warning(f"Total allocation is {total_alloc}%. It should sum to 100%.")
+# Use normalized_allocation as the "original allocation" for investment calculations.
+mid_investment = (investment_low + investment_high) / 2
+original_investment_by_channel = {ch: mid_investment * (normalized_allocation[ch] / 100) for ch in normalized_allocation}
+
+# The updated_allocation is provided via manual number inputs (if top_priority is selected).
+if top_priority != "-" and normalized_allocation:
+    updated_allocation = {}
+    st.sidebar.subheader("Manual Allocation Adjustments")
+    for ch, default_val in normalized_allocation.items():
+        updated_allocation[ch] = st.sidebar.number_input(f"Allocation for {ch} (%)", min_value=0, max_value=100, value=int(round(default_val)), step=1, format="%d")
+else:
+    updated_allocation = {}
+
+# Compute updated investment by channel using the updated allocation.
+if updated_allocation:
+    updated_investment_by_channel = {ch: mid_investment * (updated_allocation[ch] / 100) for ch in updated_allocation}
+else:
+    updated_investment_by_channel = original_investment_by_channel.copy()
 
 # -------------------------------
 # HEADER & SUMMARY OF INPUTS
 # -------------------------------
 st.markdown('<h1 class="main-title">Cortex: Professional Paid Media Strategy Tool</h1>', unsafe_allow_html=True)
-st.write("Use the sidebar to input your business criteria. Adjust channel allocations manually (they should sum to 100%). When ready, click **Run Plan** to generate your tailored strategy. Then, download a detailed PDF report.")
+st.write("Use the sidebar to input your business criteria and adjust channel allocations by manually editing the numbers. (Ensure the allocations sum to 100%.) When ready, click **Run Plan** (in the sidebar) to generate your tailored strategy. Then, download a detailed PDF report.")
 
 st.subheader("Your Inputs")
 st.write(f"**Brand Name:** {brand_name}")
@@ -240,74 +194,7 @@ st.write(f"**Marketing Priorities:** {', '.join(marketing_priorities) if marketi
 st.write(f"**Creative Formats Available:** {', '.join(creative_formats) if creative_formats else 'None'}")
 
 # -------------------------------
-# INTERACTIVE RADAR CHART (Original vs. Updated)
-# -------------------------------
-st.subheader("Channel Allocation Comparison")
-
-channels_list = list(filtered_allocation.keys())
-original_values = [filtered_allocation[ch] for ch in channels_list]
-updated_values = [updated_allocation.get(ch, 0) for ch in channels_list]
-
-radar_fig = go.Figure()
-
-# Original Allocation trace
-radar_fig.add_trace(go.Scatterpolar(
-    r=original_values,
-    theta=channels_list,
-    fill='toself',
-    fillcolor="rgba(0,37,97,0.3)",  # Secondary color at 30% opacity
-    line_color="#002561",
-    name='Original Allocation'
-))
-
-# Updated Allocation trace
-radar_fig.add_trace(go.Scatterpolar(
-    r=updated_values,
-    theta=channels_list,
-    fill='toself',
-    fillcolor="rgba(236,21,90,0.3)",  # Primary color at 30% opacity
-    line_color="#EC155A",
-    name='Updated Allocation'
-))
-
-# Adjust the radial axis for a tighter view.
-radar_fig.update_layout(
-    polar=dict(
-        radialaxis=dict(
-            visible=True,
-            range=[0, max(100, max(original_values + updated_values))]
-        )
-    ),
-    showlegend=True,
-    title=f"Channel Mix for {vertical} Brands"
-)
-
-st.plotly_chart(radar_fig, use_container_width=True, config={"editable": True})
-
-# Display allocation comparison as a table.
-allocation_df = pd.DataFrame({
-    "Channel": channels_list,
-    "Original Allocation (%)": original_values,
-    "Updated Allocation (%)": updated_values
-})
-st.subheader("Allocation Table")
-st.table(allocation_df)
-
-# -------------------------------
-# INVESTMENT BY CHANNEL CALCULATION
-# -------------------------------
-# Compute the mid-range of investment.
-mid_investment = (investment_low + investment_high) / 2
-investment_by_channel = {ch: mid_investment * (updated_allocation[ch] / 100) for ch in updated_allocation}
-inv_df = pd.DataFrame({
-    "Channel": list(investment_by_channel.keys()),
-    "Investment ($)": [f"${investment_by_channel[ch]:,.0f}" for ch in investment_by_channel]
-})
-st.subheader("Investment Allocation by Channel (Mid-Range)")
-st.table(inv_df)
-
-# -------------------------------
-# SIMPLE CHART OF TOP PRIORITY OBJECTIVE DETAILS (instead of crowded mind map)
+# DISPLAY OBJECTIVE DETAILS (Simpler than the previous mind map)
 # -------------------------------
 if top_priority != "-":
     st.subheader("Objective Details")
@@ -326,13 +213,76 @@ else:
     st.info("Please select a Top Priority Objective to view its details.")
 
 # -------------------------------
+# INTERACTIVE RADAR CHART (Original vs. Updated Allocation)
+# -------------------------------
+st.subheader("Channel Allocation Comparison (Must Sum to 100%)")
+channels_list = list(normalized_allocation.keys())
+original_values = [normalized_allocation[ch] for ch in channels_list]
+updated_values = [updated_allocation.get(ch, 0) for ch in channels_list]
+
+radar_fig = go.Figure()
+
+radar_fig.add_trace(go.Scatterpolar(
+    r=original_values,
+    theta=channels_list,
+    fill='toself',
+    fillcolor="rgba(0,37,97,0.3)",  # J37 secondary color (30% opacity)
+    line_color="#002561",
+    name='Original Allocation'
+))
+
+radar_fig.add_trace(go.Scatterpolar(
+    r=updated_values,
+    theta=channels_list,
+    fill='toself',
+    fillcolor="rgba(236,21,90,0.3)",  # J37 primary color (30% opacity)
+    line_color="#EC155A",
+    name='Updated Allocation'
+))
+
+radar_fig.update_layout(
+    polar=dict(
+        radialaxis=dict(
+            visible=True,
+            range=[0, 100]
+        )
+    ),
+    showlegend=True,
+    title=f"Channel Mix for {vertical} Brands"
+)
+
+# Enable interactive editing (if supported) so that points can be dragged.
+st.plotly_chart(radar_fig, use_container_width=True, config={"editable": True})
+
+# Display investment by channel as a table.
+investment_df = pd.DataFrame({
+    "Channel": channels_list,
+    "Original Allocation (%)": original_values,
+    "Updated Allocation (%)": updated_values,
+    "Original Investment ($)": [f"${original_investment_by_channel[ch]:,.0f}" for ch in channels_list],
+    "Updated Investment ($)": [f"${updated_investment_by_channel.get(ch, 0):,.0f}" for ch in channels_list]
+})
+total_original = sum(original_investment_by_channel[ch] for ch in channels_list)
+total_updated = sum(updated_investment_by_channel.get(ch, 0) for ch in channels_list)
+total_row = pd.DataFrame({
+    "Channel": ["Total"],
+    "Original Allocation (%)": [round(sum(original_values), 2)],
+    "Updated Allocation (%)": [round(sum(updated_values), 2)],
+    "Original Investment ($)": [f"${total_original:,.0f}"],
+    "Updated Investment ($)": [f"${total_updated:,.0f}"]
+})
+investment_df = pd.concat([investment_df, total_row], ignore_index=True)
+st.subheader("Investment Allocation by Channel")
+st.table(investment_df)
+
+# -------------------------------
 # FINAL AI GENERATED PLAN SUMMARY (Unified)
 # -------------------------------
 st.subheader("Final Plan Summary")
 
 def generate_full_plan(brand_name, business_problem, additional_business_info, vertical, creative_formats,
                        investment_low, investment_high, campaign_start, campaign_end, updated_allocations, base_summary):
-    # Read reference content if available.
+    # Include reference documents if available.
     reference_content = ""
     if os.path.exists("reference.txt"):
         with open("reference.txt", "r", encoding="utf-8") as f:
@@ -340,8 +290,10 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
     
     full_context = (
         f"You are a professional paid media and marketing consultant with deep expertise in the {vertical} vertical and "
-        f"Junction 37's strategic approach. Generate a final plan summary that includes two parts: first, a 'TLDR:' section with a one-sentence summary; then an expanded section (2-3 paragraphs) "
-        f"with actionable insights, creative recommendations, and 5 specific relevant article/resource links. Tailor your output to the client's inputs below.\n\n"
+        f"Junction 37's strategic approach. Generate a final plan summary that includes two parts: first, a 'TLDR:' section "
+        f"with a one-sentence summary; then an expanded analysis (2-3 paragraphs) that includes a Creative Themes section (3-5 themes), "
+        f"a Key Audiences section (3-5 audiences for prospecting and conversion), and a Suggested Flighting section (including data-driven insights). "
+        f"Include 5 specific, relevant resource links at the end of the analysis. Tailor your output to the client's inputs below.\n\n"
         f"Brand Name: {brand_name}\n"
         f"Business Problem: {business_problem}\n"
         f"Additional Business Info: {additional_business_info}\n"
@@ -357,7 +309,7 @@ def generate_full_plan(brand_name, business_problem, additional_business_info, v
         f"Top Priority Objective: {top_priority}\n"
         f"Brand Lifecycle Stage: {brand_lifecycle}\n\n"
         f"Base strategy summary: {base_summary}\n\n"
-        f"Generate a final plan summary as specified."
+        f"Generate a final plan summary with a TLDR section (one sentence) and an expanded analysis (2-3 paragraphs) that includes 5 specific relevant resource links."
     )
     try:
         response = openai.ChatCompletion.create(
@@ -396,19 +348,18 @@ st.markdown(st.session_state.final_plan)
 def generate_pdf(report_text):
     pdf = FPDF()
     pdf.add_page()
-    # Header
+    # Header with title and date
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "Cortex Plan Report", ln=True, align="C")
     pdf.set_font("Arial", "", 12)
     pdf.cell(0, 10, f"Report Date: {datetime.datetime.now().strftime('%Y-%m-%d')}", ln=True, align="C")
     pdf.ln(10)
     
-    # Bold section headers for known labels.
     header_labels = [
-        "Brand Name:", "Business Problem:", "Additional Business Info:", "Investment Range:", 
-        "Campaign Start Date:", "Campaign End Date:", "Top Priority Objective:", 
-        "Brand Lifecycle Stage:", "Client Vertical:", "Marketing Priorities:", 
-        "Creative Formats Available:", "Strategic Details:", "Recommended Channel Mix", 
+        "Brand Name:", "Business Problem:", "Additional Business Info:", "Investment Range:",
+        "Campaign Start Date:", "Campaign End Date:", "Top Priority Objective:",
+        "Brand Lifecycle Stage:", "Client Vertical:", "Marketing Priorities:",
+        "Creative Formats Available:", "Strategic Details:", "Recommended Channel Mix",
         "Updated Channel Allocations:", "Final Plan Summary:", "Case Study:"
     ]
     
